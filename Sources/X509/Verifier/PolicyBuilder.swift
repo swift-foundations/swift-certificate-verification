@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Provides a result-builder style DSL for constructing a ``VerifierPolicy``.
 ///
@@ -42,7 +43,7 @@ extension PolicyBuilder {
     @usableFromInline
     struct Empty: VerifierPolicy, Sendable {
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] { [] }
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] { [] }
 
         @inlinable
         init() {}
@@ -77,7 +78,7 @@ extension PolicyBuilder {
         }
 
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] {
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
             first.verifyingCriticalExtensions + second.verifyingCriticalExtensions
         }
 
@@ -125,7 +126,7 @@ extension PolicyBuilder {
         }
 
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] {
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
             self.wrapped?.verifyingCriticalExtensions ?? []
         }
 
@@ -164,7 +165,7 @@ extension PolicyBuilder {
         }
 
         @inlinable
-        public var verifyingCriticalExtensions: [ASN1ObjectIdentifier] {
+        public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
             switch self.storage {
             case .first(let first): return first.verifyingCriticalExtensions
             case .second(let second): return second.verifyingCriticalExtensions
@@ -212,7 +213,7 @@ extension PolicyBuilder {
     @usableFromInline
     struct CachedVerifyingCriticalExtensions<Wrapped: VerifierPolicy>: VerifierPolicy {
         @usableFromInline
-        let verifyingCriticalExtensions: [ASN1ObjectIdentifier]
+        let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier]
 
         @usableFromInline
         var wrapped: Wrapped

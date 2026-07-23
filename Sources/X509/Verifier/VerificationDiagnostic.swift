@@ -11,13 +11,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct VerificationDiagnostic: Sendable {
     struct LeafCertificateHasUnhandledCriticalExtensions: Hashable, Sendable {
         var leafCertificate: Certificate
-        var handledCriticalExtensions: [ASN1ObjectIdentifier]
+        var handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     }
 
     struct LeafCertificateIsInTheRootStoreButDoesNotMeetPolicy: Hashable, Sendable {
@@ -33,7 +34,7 @@ public struct VerificationDiagnostic: Sendable {
     struct IssuerHasUnhandledCriticalExtension: Hashable, Sendable {
         var issuer: Certificate
         var partialChain: [Certificate]
-        var handledCriticalExtensions: [ASN1ObjectIdentifier]
+        var handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     }
 
     struct IssuerHasNotSignedCertificate: Hashable, Sendable {
@@ -103,7 +104,7 @@ public struct VerificationDiagnostic: Sendable {
 extension VerificationDiagnostic {
     static func leafCertificateHasUnhandledCriticalExtension(
         _ leafCertificate: Certificate,
-        handledCriticalExtensions: [ASN1ObjectIdentifier]
+        handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> Self {
         self.init(
             storage: .leafCertificateHasUnhandledCriticalExtension(
@@ -140,7 +141,7 @@ extension VerificationDiagnostic {
     static func issuerHasUnhandledCriticalExtension(
         issuer: Certificate,
         chain: CandidatePartialChain,
-        handledCriticalExtensions: [ASN1ObjectIdentifier]
+        handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> Self {
         self.init(
             storage: .issuerHasUnhandledCriticalExtension(
@@ -229,7 +230,7 @@ extension VerificationDiagnostic {
 extension VerificationDiagnostic.Storage {
     static func leafCertificateHasUnhandledCriticalExtension(
         _ leafCertificate: Certificate,
-        handledCriticalExtensions: [ASN1ObjectIdentifier]
+        handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> Self {
         .leafCertificateHasUnhandledCriticalExtension(
             .init(
@@ -266,7 +267,7 @@ extension VerificationDiagnostic.Storage {
     static func issuerHasUnhandledCriticalExtension(
         issuer: Certificate,
         partialChain: [Certificate],
-        handledCriticalExtensions: [ASN1ObjectIdentifier]
+        handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> Self {
         .issuerHashUnhandledCriticalExtension(
             .init(
@@ -349,7 +350,7 @@ extension VerificationDiagnostic.Storage {
 extension Certificate.Extensions {
     @inlinable
     func unhandledCriticalExtensions(
-        for handledCriticalExtensions: [ASN1ObjectIdentifier]
+        for handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> some Sequence<Certificate.Extension> {
         self.lazy.filter { ext in
             ext.critical && !handledCriticalExtensions.contains(ext.oid)

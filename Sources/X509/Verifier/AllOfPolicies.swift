@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Use this to build a policy where all of the sub-policies must be met for the overall policy to be met.
 /// This is only useful within a OneOfPolicies block, because at the top-level, it is already required for all policies
@@ -48,7 +49,7 @@ public struct AllOfPolicies<Policy: VerifierPolicy>: VerifierPolicy {
     }
 
     @inlinable
-    public var verifyingCriticalExtensions: [ASN1ObjectIdentifier] {
+    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
         self.policy.verifyingCriticalExtensions
     }
 

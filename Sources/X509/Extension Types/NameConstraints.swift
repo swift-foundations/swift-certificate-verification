@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Constraints the namespace within which all subject names issued by a given CA must reside.
 ///
@@ -143,12 +144,12 @@ public struct NameConstraints {
         }
 
         @inlinable
-        public init(_ elements: some Sequence<ASN1OctetString>) {
+        public init(_ elements: some Sequence<ISO_8824.OctetString>) {
             self.subtrees = elements.map { .ipAddress($0) }
         }
 
         @inlinable
-        public init(arrayLiteral elements: ASN1OctetString...) {
+        public init(arrayLiteral elements: ISO_8824.OctetString...) {
             self.init(elements)
         }
 
@@ -201,7 +202,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        public subscript(position: Index) -> ASN1OctetString {
+        public subscript(position: Index) -> ISO_8824.OctetString {
             guard case .ipAddress(let ipAddress) = self.subtrees[position.wrapped] else {
                 fatalError("index \(position) is not a valid index for \(Self.self)")
             }
@@ -614,8 +615,8 @@ public struct NameConstraints {
     public init(
         permittedDNSDomains: some Sequence<String> = [],
         excludedDNSDomains: some Sequence<String> = [],
-        permittedIPRanges: some Sequence<ASN1OctetString> = [],
-        excludedIPRanges: some Sequence<ASN1OctetString> = [],
+        permittedIPRanges: some Sequence<ISO_8824.OctetString> = [],
+        excludedIPRanges: some Sequence<ISO_8824.OctetString> = [],
         permittedEmailAddresses: some Sequence<String> = [],
         excludedEmailAddresses: some Sequence<String> = [],
         permittedURIDomains: some Sequence<String> = [],
@@ -661,19 +662,19 @@ public struct NameConstraints {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.nameConstraints`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.nameConstraints`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.nameConstraints else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.nameConstraints), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.nameConstraints, found: ext.oid)
             )
         }
 
         let nameConstraintsValue = try NameConstraintsValue(derEncoded: ext.value)
         guard nameConstraintsValue.permittedSubtrees != nil || nameConstraintsValue.excludedSubtrees != nil else {
-            throw ASN1Error.invalidASN1Object(reason: "Name Constraints has no permitted or excluded subtrees")
+            throw ISO_8824.Error.invalidASN1Object(reason: "Name Constraints has no permitted or excluded subtrees")
         }
 
         self.permittedSubtrees = nameConstraintsValue.permittedSubtrees ?? []
@@ -733,25 +734,18 @@ extension Certificate.Extension {
     @inlinable
     public init(_ nameConstraints: NameConstraints, critical: Bool) throws {
         let asn1Representation = NameConstraintsValue(nameConstraints)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(oid: .X509ExtensionID.nameConstraints, critical: critical, value: serializer.serializedBytes[...])
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension NameConstraints: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
     }
 }
 
 // MARK: ASN1 Helpers
 @usableFromInline
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-struct NameConstraintsValue: DERImplicitlyTaggable, Sendable {
+struct NameConstraintsValue: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -778,13 +772,13 @@ struct NameConstraintsValue: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let permittedSubtrees: GeneralSubtrees? = try DER.optionalImplicitlyTagged(
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> NameConstraintsValue in
+            let permittedSubtrees: GeneralSubtrees? = try ISO_8825.DER.optionalImplicitlyTagged(
                 &nodes,
                 tag: .init(tagWithNumber: 0, tagClass: .contextSpecific)
             )
-            let excludedSubtrees: GeneralSubtrees? = try DER.optionalImplicitlyTagged(
+            let excludedSubtrees: GeneralSubtrees? = try ISO_8825.DER.optionalImplicitlyTagged(
                 &nodes,
                 tag: .init(tagWithNumber: 1, tagClass: .contextSpecific)
             )
@@ -797,8 +791,8 @@ struct NameConstraintsValue: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serializeOptionalImplicitlyTagged(
                 self.permittedSubtrees.map { GeneralSubtrees($0) },
                 withIdentifier: .init(tagWithNumber: 0, tagClass: .contextSpecific)
@@ -837,9 +831,9 @@ struct NameConstraintsValue: DERImplicitlyTaggable, Sendable {
 // [GeneralSubtree] will force a heap allocation. Instead, we inline the definition of GeneralSubtree into
 // GeneralSubtrees, to avoid the extra allocation.
 @usableFromInline
-struct GeneralSubtrees: DERImplicitlyTaggable, Sendable {
+struct GeneralSubtrees: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -852,11 +846,11 @@ struct GeneralSubtrees: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self.base = try DER.sequence(rootNode, identifier: identifier) { nodes in
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self.base = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> [GeneralName] in
             var names: [GeneralName] = []
             while let node = nodes.next() {
-                let name = try DER.sequence(node, identifier: .sequence) { nodes in
+                let name = try ISO_8825.DER.sequence(node, identifier: .sequence) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> GeneralName in
                     try GeneralName(derEncoded: &nodes)
                 }
                 names.append(name)
@@ -866,10 +860,10 @@ struct GeneralSubtrees: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             for name in self.base {
-                try coder.appendConstructedNode(identifier: .sequence) { coder in
+                try coder.appendConstructedNode(identifier: .sequence) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
                     try coder.serialize(name)
                 }
             }

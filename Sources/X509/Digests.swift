@@ -31,7 +31,7 @@ enum Digest: Sendable {
     static func computeDigest<Bytes: DataProtocol>(
         for bytes: Bytes,
         using digestIdentifier: AlgorithmIdentifier
-    ) throws -> Digest {
+    ) throws(Certificate.Error) -> Digest {
         switch digestIdentifier {
         case .sha1, .sha1UsingNil:
             return .insecureSHA1(Insecure.SHA1.hash(data: bytes))
@@ -42,7 +42,7 @@ enum Digest: Sendable {
         case .sha512, .sha512UsingNil:
             return .sha512(SHA512.hash(data: bytes))
         default:
-            throw CertificateError.unsupportedDigestAlgorithm(reason: "Unknown digest algorithm: \(digestIdentifier)")
+            throw Certificate.Error.algorithm(.unsupportedDigest(digestIdentifier.algorithm))
         }
     }
 }

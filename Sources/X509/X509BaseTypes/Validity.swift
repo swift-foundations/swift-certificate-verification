@@ -12,15 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 // Validity ::= SEQUENCE {
 // notBefore      Time,
 // notAfter       Time  }
 @usableFromInline
-struct Validity: DERImplicitlyTaggable, Hashable, Sendable {
+struct Validity: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -37,8 +38,8 @@ struct Validity: DERImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> Validity in
             let notBefore = try Time(derEncoded: &nodes)
             let notAfter = try Time(derEncoded: &nodes)
             return Validity(notBefore: notBefore, notAfter: notAfter)
@@ -46,8 +47,8 @@ struct Validity: DERImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.notBefore)
             try coder.serialize(self.notAfter)
         }

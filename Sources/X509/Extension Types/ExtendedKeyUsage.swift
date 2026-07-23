@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Indicates one or more purposes for which the certified public key
 /// may be used, in addition to or instead of the the purposes indicated
@@ -36,15 +37,14 @@ public struct ExtendedKeyUsage {
         // This can be used for DoS attacks so we have added this limit.
         let maxUsages = 32
         guard self.usages.count <= maxUsages else {
-            throw ASN1Error.invalidASN1Object(
+            throw ISO_8824.Error.invalidASN1Object(
                 reason: "Too many extended key usages. Found \(self.usages.count) but only \(maxUsages) are allowed."
             )
         }
 
-        if let (firstIndex, secondIndex) = self.usages.findDuplicates(by: ==) {
-            let usage = self.usages[firstIndex]
-            throw CertificateError.duplicateOID(
-                reason: "duplicate \(usage) usage. First at \(firstIndex) and second at \(secondIndex)"
+        if let (firstIndex, _) = self.usages.findDuplicates(by: ==) {
+            throw Certificate.Error.extension(
+                .duplicateOID(ISO_8824.ObjectIdentifier(self.usages[firstIndex]))
             )
         }
     }
@@ -54,13 +54,13 @@ public struct ExtendedKeyUsage {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.extendedKeyUsage`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.extendedKeyUsage`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.extendedKeyUsage else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.extendedKeyUsage), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.extendedKeyUsage, found: ext.oid)
             )
         }
 
@@ -198,7 +198,7 @@ extension ExtendedKeyUsage {
             case ocspSigning
             case any
             case certificateTransparency
-            case unknown(ASN1ObjectIdentifier)
+            case unknown(ISO_8824.ObjectIdentifier)
         }
 
         @usableFromInline
@@ -213,7 +213,7 @@ extension ExtendedKeyUsage {
         ///
         /// - Parameter oid: The OID of the usage.
         @inlinable
-        public init(oid: ASN1ObjectIdentifier) {
+        public init(oid: ISO_8824.ObjectIdentifier) {
             switch oid {
             case .ExtendedKeyUsage.serverAuth:
                 self = .serverAuth
@@ -330,25 +330,18 @@ extension Certificate.Extension {
     @inlinable
     public init(_ eku: ExtendedKeyUsage, critical: Bool) throws {
         let asn1Representation = ASN1ExtendedKeyUsage(eku)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(oid: .X509ExtensionID.extendedKeyUsage, critical: critical, value: serializer.serializedBytes[...])
     }
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension ExtendedKeyUsage: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
-    }
-}
-
-extension ASN1ObjectIdentifier {
+extension ISO_8824.ObjectIdentifier {
     /// Construct the OID corresponding to a specific extended key usage.
     ///
     /// - Parameter usage: the EKU to use to construct the OID.
     @inlinable
-    public init(_ usage: X509.ExtendedKeyUsage.Usage) {
+    public init(_ usage: Certificates.ExtendedKeyUsage.Usage) {
         switch usage.backing {
         case .serverAuth:
             self = .ExtendedKeyUsage.serverAuth
@@ -376,58 +369,58 @@ extension ASN1ObjectIdentifier {
     /// extension.
     public enum ExtendedKeyUsage: Sendable {
         /// The public key may be used for any purpose.
-        public static let any: ASN1ObjectIdentifier = [2, 5, 29, 37, 0]
+        public static let any: ISO_8824.ObjectIdentifier = [2, 5, 29, 37, 0]
 
         /// The public key may be used for TLS web servers.
-        public static let serverAuth: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 1]
+        public static let serverAuth: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 1]
 
         /// The public key may be used for TLS web client authentication.
-        public static let clientAuth: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 2]
+        public static let clientAuth: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 2]
 
         /// The public key may be used for signing of downloadable executable code.
-        public static let codeSigning: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 3]
+        public static let codeSigning: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 3]
 
         /// The public key may be used for email protection.
-        public static let emailProtection: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 4]
+        public static let emailProtection: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 4]
 
         /// The public key may be used for binding the hash of an object to a time.
-        public static let timeStamping: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 8]
+        public static let timeStamping: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 8]
 
         /// The public key may be used for signing OCSP responses.
-        public static let ocspSigning: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 9]
+        public static let ocspSigning: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 3, 9]
 
         /// The public key may be used for signing certificate transparency precertificates.
-        public static let certificateTransparency: ASN1ObjectIdentifier = [1, 3, 6, 1, 4, 1, 11129, 2, 4, 4]
+        public static let certificateTransparency: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 4, 1, 11129, 2, 4, 4]
     }
 }
 
 @usableFromInline
-struct ASN1ExtendedKeyUsage: DERImplicitlyTaggable, Sendable {
+struct ASN1ExtendedKeyUsage: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @usableFromInline
-    var usages: [ASN1ObjectIdentifier]
+    var usages: [ISO_8824.ObjectIdentifier]
 
     @inlinable
-    init(_ usages: [ASN1ObjectIdentifier]) {
+    init(_ usages: [ISO_8824.ObjectIdentifier]) {
         self.usages = usages
     }
 
     @inlinable
     init(_ eku: ExtendedKeyUsage) {
-        self.usages = eku.usages.map { ASN1ObjectIdentifier($0) }
+        self.usages = eku.usages.map { ISO_8824.ObjectIdentifier($0) }
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self.usages = try DER.sequence(identifier: identifier, rootNode: rootNode)
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self.usages = try ISO_8825.DER.sequence(identifier: identifier, rootNode: rootNode)
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         try coder.serializeSequenceOf(self.usages, identifier: identifier)
     }
 }

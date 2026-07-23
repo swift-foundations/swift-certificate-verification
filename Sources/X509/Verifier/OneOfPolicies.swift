@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Provides a result-builder style DSL for constructing a ``VerifierPolicy`` in which one of the specified policies must match.
 ///
@@ -43,7 +44,7 @@ extension OneOfPolicyBuilder {
     @usableFromInline
     struct Empty: VerifierPolicy, Sendable {
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] { [] }
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] { [] }
 
         @inlinable
         init() {}
@@ -78,7 +79,7 @@ extension OneOfPolicyBuilder {
         }
 
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] {
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
             let firstExtensions = first.verifyingCriticalExtensions
             let secondExtensions = second.verifyingCriticalExtensions
             return firstExtensions.filter { secondExtensions.contains($0) }
@@ -133,7 +134,7 @@ extension OneOfPolicyBuilder {
         }
 
         @inlinable
-        var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] {
+        var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
             self.wrapped?.verifyingCriticalExtensions ?? []
         }
 
@@ -199,7 +200,7 @@ public struct OneOfPolicies<Policy: VerifierPolicy>: VerifierPolicy {
     }
 
     @inlinable
-    public var verifyingCriticalExtensions: [ASN1ObjectIdentifier] {
+    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
         policy.verifyingCriticalExtensions
     }
 

@@ -12,21 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import SwiftASN1
-#if os(Windows)
-import WinSDK
-#elseif canImport(Android)
-import Android
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#endif
+import ISO_8824
+import ISO_8825
+import RFC_791
+import RFC_4291
 
 /// A ``VerifierPolicy`` that validates that the leaf certificate is authoritative
 /// for a given hostname or IP address.
@@ -64,7 +53,7 @@ public struct ServerIdentityPolicy: Sendable {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension ServerIdentityPolicy: VerifierPolicy {
     @inlinable
-    public var verifyingCriticalExtensions: [ASN1ObjectIdentifier] {
+    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
         [.X509ExtensionID.subjectAlternativeName]
     }
 
@@ -89,8 +78,8 @@ extension ServerIdentityPolicy: VerifierPolicy {
 extension ServerIdentityPolicy {
     @usableFromInline
     enum IPAddress: Sendable {
-        case v4(in_addr)
-        case v6(in6_addr)
+        case v4(RFC_791.IPv4.Address)
+        case v6(RFC_4291.IPv6.Address)
     }
 
     @usableFromInline
@@ -155,28 +144,14 @@ extension ServerIdentityPolicy {
 
     // This should really be an init, but weird compiler issues have prevented it from being one.
     @_spi(Testing)
-    public static func parsingIPv4Address(_ string: String) -> in_addr? {
-        var value = in_addr()
-
-        let rc = string.withCString {
-            inet_pton(AF_INET, $0, &value)
-        }
-
-        if rc != 1 { return nil }
-        return value
+    public static func parsingIPv4Address(_ string: String) -> RFC_791.IPv4.Address? {
+        try? RFC_791.IPv4.Address(string)
     }
 
     // This should really be an init, but weird compiler issues have prevented it from being one.
     @_spi(Testing)
-    public static func parsingIPv6Address(_ string: String) -> in6_addr? {
-        var value = in6_addr()
-
-        let rc = string.withCString {
-            inet_pton(AF_INET6, $0, &value)
-        }
-
-        if rc != 1 { return nil }
-        return value
+    public static func parsingIPv6Address(_ string: String) -> RFC_4291.IPv6.Address? {
+        try? RFC_4291.IPv6.Address(ascii: string.utf8.map(Byte.init))
     }
 }
 
@@ -235,16 +210,16 @@ extension Optional where Wrapped == ServerIdentityPolicy.LazyServerHostname {
 }
 
 extension ServerIdentityPolicy.IPAddress {
-    init?(sanField: ASN1OctetString) {
+    init?(sanField: ISO_8824.OctetString) {
         switch sanField.bytes.count {
         case 4:
-            let addr = sanField.bytes.withUnsafeBufferPointer {
-                UnsafeRawPointer($0.baseAddress!).loadUnaligned(as: in_addr.self)
+            guard let addr = try? RFC_791.IPv4.Address(binary: sanField.bytes.map(Byte.init)) else {
+                return nil
             }
             self = .v4(addr)
         case 16:
-            let addr = sanField.bytes.withUnsafeBufferPointer {
-                UnsafeRawPointer($0.baseAddress!).loadUnaligned(as: in6_addr.self)
+            guard let addr = try? RFC_4291.IPv6.Address(binary: sanField.bytes.map(Byte.init)) else {
+                return nil
             }
             self = .v6(addr)
         default:
@@ -351,10 +326,10 @@ extension Certificate {
     ) -> Bool {
         // These match if the two underlying IP address structures match.
         switch (serverIP, certificateIP) {
-        case (.v4(var addr1), .v4(var addr2)):
-            return memcmp(&addr1, &addr2, MemoryLayout<in_addr>.size) == 0
-        case (.v6(var addr1), .v6(var addr2)):
-            return memcmp(&addr1, &addr2, MemoryLayout<in6_addr>.size) == 0
+        case (.v4(let addr1), .v4(let addr2)):
+            return addr1 == addr2
+        case (.v6(let addr1), .v6(let addr2)):
+            return addr1 == addr2
         default:
             // Different protocol families, no match.
             return false
@@ -378,12 +353,12 @@ extension DistinguishedName {
 }
 
 private let asciiIDNAIdentifier: ArraySlice<UInt8> = Array("xn--".utf8)[...]
-private let asciiCapitals: ClosedRange<UInt8> = (UInt8(ascii: "A")...UInt8(ascii: "Z"))
-private let asciiLowercase: ClosedRange<UInt8> = (UInt8(ascii: "a")...UInt8(ascii: "z"))
-private let asciiNumbers: ClosedRange<UInt8> = (UInt8(ascii: "0")...UInt8(ascii: "9"))
-private let asciiHyphen: UInt8 = UInt8(ascii: "-")
-private let asciiPeriod: UInt8 = UInt8(ascii: ".")
-private let asciiAsterisk: UInt8 = UInt8(ascii: "*")
+private let asciiCapitals: ClosedRange<UInt8> = (UInt8(ascii: "A" as Unicode.Scalar)...UInt8(ascii: "Z" as Unicode.Scalar))
+private let asciiLowercase: ClosedRange<UInt8> = (UInt8(ascii: "a" as Unicode.Scalar)...UInt8(ascii: "z" as Unicode.Scalar))
+private let asciiNumbers: ClosedRange<UInt8> = (UInt8(ascii: "0" as Unicode.Scalar)...UInt8(ascii: "9" as Unicode.Scalar))
+private let asciiHyphen: UInt8 = UInt8(ascii: "-" as Unicode.Scalar)
+private let asciiPeriod: UInt8 = UInt8(ascii: "." as Unicode.Scalar)
+private let asciiAsterisk: UInt8 = UInt8(ascii: "*" as Unicode.Scalar)
 
 extension Collection {
     /// Splits a collection in two around a given index. This index may be nil, in which case the split

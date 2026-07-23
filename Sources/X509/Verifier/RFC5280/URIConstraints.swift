@@ -12,25 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-#if os(Windows)
-import WinSDK
-#elseif canImport(Glibc)
-import Glibc
-import CoreFoundation
-#elseif canImport(Musl)
-import Musl
-import CoreFoundation
-#elseif canImport(Darwin)
-import Darwin
-#elseif canImport(Android)
-import Android
-import CoreFoundation
-#endif
+import RFC_3986
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension NameConstraintsPolicy {
@@ -58,37 +40,20 @@ extension NameConstraintsPolicy {
     static func uriNameMatchesConstraint(uriName: String, constraint: String) -> Bool {
         // If we can't parse the URL, the constraint is definitely not satisfied.
         // If there is no authority component then the last rule above applies.
-        guard let parsed = URL(string: uriName), let host = parsed.host else {
+        guard let parsed = try? RFC_3986.URI(uriName), let host = parsed.host else {
             return false
         }
 
-        if host.isIPAddress {
+        if host.ipv4Address != nil || host.ipv6Address != nil {
             // IP addresses are forbidden if there is a constraint.
             return false
         }
 
         // From this point, we can do regular domain matching.
-        return Self.dnsNameMatchesConstraint(dnsName: host.utf8, constraint: constraint.utf8)
-
-    }
-}
-
-extension String {
-    @inlinable
-    var isIPAddress: Bool {
-        #if os(Windows)
-        var v4: IN_ADDR = IN_ADDR()
-        var v6: IN6_ADDR = IN6_ADDR()
-        return self.withCString(encodedAs: UTF16.self) {
-            return InetPtonW(AF_INET, $0, &v4) == 1 || InetPtonW(AF_INET6, $0, &v6) == 1
+        guard let regName = host.registeredNameValue else {
+            return false
         }
-        #else
-        // We need some scratch space to let inet_pton write into.
-        var ipv4Addr = in_addr()
-        var ipv6Addr = in6_addr()
-        return self.withCString { ptr in
-            return inet_pton(AF_INET, ptr, &ipv4Addr) == 1 || inet_pton(AF_INET6, ptr, &ipv6Addr) == 1
-        }
-        #endif
+        return Self.dnsNameMatchesConstraint(dnsName: regName.utf8, constraint: constraint.utf8)
+
     }
 }

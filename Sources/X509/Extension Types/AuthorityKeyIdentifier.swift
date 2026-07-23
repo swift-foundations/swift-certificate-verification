@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Provides information about the public key corresponding to the private key that was
 /// used to sign a specific certificate.
@@ -52,12 +53,12 @@ public struct AuthorityKeyIdentifier {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.authorityKeyIdentifier`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.authorityKeyIdentifier`.
     @inlinable
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.authorityKeyIdentifier else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.authorityKeyIdentifier), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.authorityKeyIdentifier, found: ext.oid)
             )
         }
 
@@ -114,7 +115,7 @@ extension Certificate.Extension {
     @inlinable
     public init(_ aki: AuthorityKeyIdentifier, critical: Bool) throws {
         let asn1Representation = AuthorityKeyIdentifierValue(aki)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(
             oid: .X509ExtensionID.authorityKeyIdentifier,
@@ -124,23 +125,16 @@ extension Certificate.Extension {
     }
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension AuthorityKeyIdentifier: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
-    }
-}
-
 // MARK: ASN1 helpers
 @usableFromInline
-struct AuthorityKeyIdentifierValue: DERImplicitlyTaggable, Sendable {
+struct AuthorityKeyIdentifierValue: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @usableFromInline
-    var keyIdentifier: ASN1OctetString?
+    var keyIdentifier: ISO_8824.OctetString?
 
     @usableFromInline
     var authorityCertIssuer: [GeneralName]?
@@ -150,7 +144,7 @@ struct AuthorityKeyIdentifierValue: DERImplicitlyTaggable, Sendable {
 
     @inlinable
     init(
-        keyIdentifier: ASN1OctetString?,
+        keyIdentifier: ISO_8824.OctetString?,
         authorityCertIssuer: [GeneralName]?,
         authorityCertSerialNumber: ArraySlice<UInt8>?
     ) {
@@ -162,23 +156,23 @@ struct AuthorityKeyIdentifierValue: DERImplicitlyTaggable, Sendable {
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     init(_ aki: AuthorityKeyIdentifier) {
-        self.keyIdentifier = aki.keyIdentifier.map { ASN1OctetString(contentBytes: $0) }
+        self.keyIdentifier = aki.keyIdentifier.map { ISO_8824.OctetString(contentBytes: $0) }
         self.authorityCertIssuer = aki.authorityCertIssuer
         self.authorityCertSerialNumber = aki.authorityCertSerialNumber.map { $0.bytes }
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let keyIdentifier: ASN1OctetString? = try DER.optionalImplicitlyTagged(
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> AuthorityKeyIdentifierValue in
+            let keyIdentifier: ISO_8824.OctetString? = try ISO_8825.DER.optionalImplicitlyTagged(
                 &nodes,
                 tag: .init(tagWithNumber: 0, tagClass: .contextSpecific)
             )
-            let authorityCertIssuer: GeneralNames? = try DER.optionalImplicitlyTagged(
+            let authorityCertIssuer: GeneralNames? = try ISO_8825.DER.optionalImplicitlyTagged(
                 &nodes,
                 tag: .init(tagWithNumber: 1, tagClass: .contextSpecific)
             )
-            let authorityCertSerialNumber: ArraySlice<UInt8>? = try DER.optionalImplicitlyTagged(
+            let authorityCertSerialNumber: ArraySlice<UInt8>? = try ISO_8825.DER.optionalImplicitlyTagged(
                 &nodes,
                 tag: .init(tagWithNumber: 2, tagClass: .contextSpecific)
             )
@@ -192,8 +186,8 @@ struct AuthorityKeyIdentifierValue: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serializeOptionalImplicitlyTagged(
                 self.keyIdentifier,
                 withIdentifier: .init(tagWithNumber: 0, tagClass: .contextSpecific)

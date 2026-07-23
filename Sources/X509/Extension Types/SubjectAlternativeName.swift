@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Allows identities to be bound to the subject of a certificate.
 ///
@@ -43,13 +44,13 @@ public struct SubjectAlternativeNames {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.subjectAlternativeName`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.subjectAlternativeName`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.subjectAlternativeName else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.subjectAlternativeName), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.subjectAlternativeName, found: ext.oid)
             )
         }
 
@@ -112,19 +113,12 @@ extension Certificate.Extension {
     @inlinable
     public init(_ san: SubjectAlternativeNames, critical: Bool) throws {
         let asn1Representation = GeneralNames(san.names)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(
             oid: .X509ExtensionID.subjectAlternativeName,
             critical: critical,
             value: serializer.serializedBytes[...]
         )
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension SubjectAlternativeNames: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
     }
 }

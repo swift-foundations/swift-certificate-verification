@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @usableFromInline
-struct SubjectPublicKeyInfo: DERImplicitlyTaggable, Hashable, Sendable {
+struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -25,26 +26,26 @@ struct SubjectPublicKeyInfo: DERImplicitlyTaggable, Hashable, Sendable {
     var algorithmIdentifier: AlgorithmIdentifier
 
     @usableFromInline
-    var key: ASN1BitString
+    var key: ISO_8824.BitString
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         // The SPKI block looks like this:
         //
         // SubjectPublicKeyInfo  ::=  SEQUENCE  {
         //   algorithm         AlgorithmIdentifier,
         //   subjectPublicKey  BIT STRING
         // }
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> SubjectPublicKeyInfo in
             let algorithmIdentifier = try AlgorithmIdentifier(derEncoded: &nodes)
-            let key = try ASN1BitString(derEncoded: &nodes)
+            let key = try ISO_8824.BitString(derEncoded: &nodes)
 
             return SubjectPublicKeyInfo(algorithmIdentifier: algorithmIdentifier, key: key)
         }
     }
 
     @inlinable
-    init(algorithmIdentifier: AlgorithmIdentifier, key: ASN1BitString) {
+    init(algorithmIdentifier: AlgorithmIdentifier, key: ISO_8824.BitString) {
         self.algorithmIdentifier = algorithmIdentifier
         self.key = key
     }
@@ -52,12 +53,12 @@ struct SubjectPublicKeyInfo: DERImplicitlyTaggable, Hashable, Sendable {
     @inlinable
     internal init(algorithmIdentifier: AlgorithmIdentifier, key: [UInt8]) {
         self.algorithmIdentifier = algorithmIdentifier
-        self.key = ASN1BitString(bytes: key[...])
+        self.key = ISO_8824.BitString(bytes: key[...])
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.algorithmIdentifier)
             try coder.serialize(self.key)
         }

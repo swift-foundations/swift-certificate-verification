@@ -12,35 +12,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import SwiftASN1
+import ISO_8824
+import ISO_8825
+import Time_Primitive
 
 // Time ::= CHOICE {
-// utcTime        UTCTime,
-// generalTime    GeneralizedTime }
+// utcTime        ISO_8824.UTCTime,
+// generalTime    ISO_8824.GeneralizedTime }
 @usableFromInline
-enum Time: DERParseable, DERSerializable, Hashable, Sendable {
-    case utcTime(UTCTime)
-    case generalTime(GeneralizedTime)
+enum Time: ISO_8825.DER.Parseable, ISO_8825.DER.Serializable, Hashable, Sendable {
+    case utcTime(ISO_8824.UTCTime)
+    case generalTime(ISO_8824.GeneralizedTime)
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node) throws {
+    init(derEncoded rootNode: ISO_8825.Node) throws(ISO_8824.Error) {
         switch rootNode.identifier {
-        case GeneralizedTime.defaultIdentifier:
-            self = .generalTime(try GeneralizedTime(derEncoded: rootNode))
-        case UTCTime.defaultIdentifier:
-            self = .utcTime(try UTCTime(derEncoded: rootNode))
+        case ISO_8824.GeneralizedTime.defaultIdentifier:
+            self = .generalTime(try ISO_8824.GeneralizedTime(derEncoded: rootNode))
+        case ISO_8824.UTCTime.defaultIdentifier:
+            self = .utcTime(try ISO_8824.UTCTime(derEncoded: rootNode))
         default:
-            throw ASN1Error.unexpectedFieldType(rootNode.identifier)
+            throw ISO_8824.Error.unexpectedFieldType(rootNode.identifier)
         }
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer) throws {
+    func serialize(into coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) {
         switch self {
         case .utcTime(let utcTime):
             try coder.serialize(utcTime)
@@ -49,32 +46,34 @@ enum Time: DERParseable, DERSerializable, Hashable, Sendable {
         }
     }
 
+    // RFC 5280 §4.1.2.5 cutover law: dates through 2049 MUST be encoded as
+    // ISO_8824.UTCTime; 2050 and later as ISO_8824.GeneralizedTime. This civil-time conversion
+    // transfers to the L2 swift-rfc-5280 owner at the no-duplication
+    // reconciliation; it lives in-fork until that lane lands.
     @inlinable
-    static func makeTime(from date: Date) throws -> Time {
-        let components = date.utcDate
+    static func makeTime(from instant: Instant) throws -> Time {
+        let components = instant.utcDate
 
-        // The rule is if the year is outside the range 1950-2049 inclusive, we should encode
-        // it as a generalized time. Otherwise, use a UTCTime.
         guard ((1950)..<(2050)).contains(components.year) else {
-            let generalizedTime = try GeneralizedTime(components)
+            let generalizedTime = try ISO_8824.GeneralizedTime(components)
             return .generalTime(generalizedTime)
         }
-        let utcTime = try UTCTime(components)
+        let utcTime = try ISO_8824.UTCTime(components)
         return .utcTime(utcTime)
     }
 }
 
-extension Date {
+extension Instant {
     @inlinable
     init(fromUTCDate date: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) {
-        let timestamp = Int64(timestampFromUTCDate: date)
-        self = .init(timeIntervalSince1970: TimeInterval(timestamp))
+        self.init(secondsSinceUnixEpoch: Int64(timestampFromUTCDate: date))
     }
 
     @inlinable
     var utcDate: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int) {
-        let timestamp = Int64(self.timeIntervalSince1970.rounded())
-        return timestamp.utcDateFromTimestamp
+        // Certificate validity has whole-second precision; the nanosecond
+        // fraction is deliberately dropped.
+        self.secondsSinceUnixEpoch.utcDateFromTimestamp
     }
 
     @inlinable
@@ -88,8 +87,8 @@ extension Date {
     }
 
     @inlinable
-    init(_ time: GeneralizedTime) {
-        self = Date(
+    init(_ time: ISO_8824.GeneralizedTime) {
+        self = Instant(
             fromUTCDate: (
                 year: time.year, month: time.month, day: time.day, hours: time.hours, minutes: time.minutes,
                 seconds: time.seconds
@@ -98,8 +97,8 @@ extension Date {
     }
 
     @inlinable
-    init(_ time: UTCTime) {
-        self = Date(
+    init(_ time: ISO_8824.UTCTime) {
+        self = Instant(
             fromUTCDate: (
                 year: time.year, month: time.month, day: time.day, hours: time.hours, minutes: time.minutes,
                 seconds: time.seconds
@@ -108,15 +107,15 @@ extension Date {
     }
 }
 
-extension GeneralizedTime {
+extension ISO_8824.GeneralizedTime {
     @inlinable
     init(_ time: Time) {
         switch time {
         case .generalTime(let t):
             self = t
         case .utcTime(let t):
-            // This can never throw, all valid UTCTimes are valid GeneralizedTimes
-            self = try! GeneralizedTime(
+            // This can never throw, all valid ISO_8824.UTCTimes are valid ISO_8824.GeneralizedTimes
+            self = try! ISO_8824.GeneralizedTime(
                 year: t.year,
                 month: t.month,
                 day: t.day,
@@ -142,13 +141,13 @@ extension GeneralizedTime {
     }
 
     @inlinable
-    init(_ date: Date) {
-        // This cannot throw: any valid Date can be represented.
-        try! self.init(date.utcDate)
+    init(_ instant: Instant) {
+        // This cannot throw: any valid Instant can be represented.
+        try! self.init(instant.utcDate)
     }
 }
 
-extension UTCTime {
+extension ISO_8824.UTCTime {
     @inlinable
     init(_ components: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) throws {
         try self.init(

@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 @preconcurrency import Crypto
-import _CryptoExtras
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -44,18 +44,11 @@ extension Certificate {
             case .p521PublicKey:
                 let key = try P521.Signing.PublicKey(x963Representation: spki.key.bytes)
                 self.backing = .p521(key)
-            case .rsaKey:
-                // To confirm that only the PKCS#1 format is allowed here, we actually attempt to decode the inner key
-                // format. Sadly, Swift Crypto doesn't have a way to accept the raw numbers directly, so we then ask it
-                // to decode as well.
-                _ = try RSAPKCS1PublicKey(derEncoded: spki.key.bytes)
-                let key = try _RSA.Signing.PublicKey(derRepresentation: spki.key.bytes)
-                self.backing = .rsa(key)
             case .ed25519:
                 let key = try Curve25519.Signing.PublicKey(rawRepresentation: spki.key.bytes)
                 self.backing = .ed25519(key)
             default:
-                throw CertificateError.unsupportedPublicKeyAlgorithm(reason: "\(spki.algorithmIdentifier)")
+                throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
             }
         }
 
@@ -83,13 +76,6 @@ extension Certificate {
         @inlinable
         public init(_ p521: P521.Signing.PublicKey) {
             self.backing = .p521(p521)
-        }
-
-        /// Construct a public key wrapping a RSA public key.
-        /// - Parameter rsa: The RSA public key to wrap.
-        @inlinable
-        public init(_ rsa: _RSA.Signing.PublicKey) {
-            self.backing = .rsa(rsa)
         }
 
         /// Construct a public key wrapping an Ed25519 public key.
@@ -122,21 +108,6 @@ extension Certificate.PublicKey {
         )
     }
 
-    /// Confirms that `signature` is a valid signature for `csr`, created by the
-    /// private key associated with this public key.
-    ///
-    /// This function abstracts over the need to unwrap both the signature and public key to
-    /// confirm they're of matching type before we validate the signature.
-    ///
-    /// - Parameters:
-    ///   - signature: The signature to validate against `csr`.
-    ///   - csr: The ``CertificateSigningRequest`` to validate against `signature`.
-    /// - Returns: Whether the signature was produced by signing `csr` with the private key corresponding to this public key.
-    @inlinable
-    public func isValidSignature(_ signature: Certificate.Signature, for csr: CertificateSigningRequest) -> Bool {
-        return self.isValidSignature(signature, for: csr.infoBytes, signatureAlgorithm: csr.signatureAlgorithm)
-    }
-
     @inlinable
     internal func isValidSignature<Bytes: DataProtocol>(
         _ signature: Certificate.Signature,
@@ -150,8 +121,6 @@ extension Certificate.PublicKey {
             return p384.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         case .p521(let p521):
             return p521.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .rsa(let rsa):
-            return rsa.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         case .ed25519(let ed25519):
             return ed25519.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         }
@@ -181,8 +150,6 @@ extension Certificate.PublicKey {
             return p384.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         case .p521(let p521):
             return p521.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .rsa(let rsa):
-            return rsa.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         case .ed25519(let ed25519):
             return ed25519.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
         }
@@ -205,8 +172,6 @@ extension Certificate.PublicKey: CustomStringConvertible {
             return "P384.PublicKey"
         case .p521:
             return "P521.PublicKey"
-        case .rsa(let publicKey):
-            return "RSA\(publicKey.keySizeInBits).PublicKey"
         case .ed25519:
             return "Ed25519.PublicKey"
         }
@@ -220,7 +185,6 @@ extension Certificate.PublicKey {
         case p256(Crypto.P256.Signing.PublicKey)
         case p384(Crypto.P384.Signing.PublicKey)
         case p521(Crypto.P521.Signing.PublicKey)
-        case rsa(_CryptoExtras._RSA.Signing.PublicKey)
         case ed25519(Curve25519.Signing.PublicKey)
 
         @inlinable
@@ -232,8 +196,6 @@ extension Certificate.PublicKey {
                 return l.rawRepresentation == r.rawRepresentation
             case (.p521(let l), .p521(let r)):
                 return l.rawRepresentation == r.rawRepresentation
-            case (.rsa(let l), .rsa(let r)):
-                return l.derRepresentation == r.derRepresentation
             case (.ed25519(let l), .ed25519(let r)):
                 return l.rawRepresentation == r.rawRepresentation
             default:
@@ -253,9 +215,6 @@ extension Certificate.PublicKey {
             case .p521(let digest):
                 hasher.combine(2)
                 hasher.combine(digest.rawRepresentation)
-            case .rsa(let digest):
-                hasher.combine(3)
-                hasher.combine(digest.derRepresentation)
             case .ed25519(let digest):
                 hasher.combine(4)
                 hasher.combine(digest.rawRepresentation)
@@ -269,7 +228,7 @@ extension SubjectPublicKeyInfo {
     @inlinable
     init(_ publicKey: Certificate.PublicKey) {
         let algorithmIdentifier: AlgorithmIdentifier
-        let key: ASN1BitString
+        let key: ISO_8824.BitString
 
         switch publicKey.backing {
         case .p256(let p256):
@@ -281,9 +240,6 @@ extension SubjectPublicKeyInfo {
         case .p521(let p521):
             algorithmIdentifier = .p521PublicKey
             key = .init(bytes: ArraySlice(p521.x963Representation))
-        case .rsa(let rsa):
-            algorithmIdentifier = .rsaKey
-            key = .init(bytes: ArraySlice(rsa.pkcs1DERRepresentation))
         case .ed25519(let ed25519):
             algorithmIdentifier = .ed25519
             key = .init(bytes: ArraySlice(ed25519.rawRepresentation))
@@ -354,22 +310,6 @@ extension P521.Signing.PublicKey {
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension _RSA.Signing.PublicKey {
-    /// Create an RSA Public Key from a given ``Certificate/PublicKey-swift.struct``.
-    ///
-    /// Fails if the key is not an RSA key.
-    ///
-    /// - parameters:
-    ///     - key: The key to unwrap.
-    public init?(_ key: Certificate.PublicKey) {
-        guard case .rsa(let inner) = key.backing else {
-            return nil
-        }
-        self = inner
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Curve25519.Signing.PublicKey {
     /// Create a Curve25519 Public Key from a given ``Certificate/PublicKey-swift.struct``.
     ///
@@ -386,30 +326,29 @@ extension Curve25519.Signing.PublicKey {
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate.PublicKey: PEMParseable, PEMSerializable {
+extension Certificate.PublicKey: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultPEMDiscriminator: String {
-        return "PUBLIC KEY"
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate.PublicKey: DERImplicitlyTaggable {
-    @inlinable
-    public static var defaultIdentifier: SwiftASN1.ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         SubjectPublicKeyInfo.defaultIdentifier
     }
 
     @inlinable
-    public init(derEncoded: SwiftASN1.ASN1Node, withIdentifier identifier: SwiftASN1.ASN1Identifier) throws {
-        try self.init(spki: try SubjectPublicKeyInfo(derEncoded: derEncoded, withIdentifier: identifier))
+    public init(derEncoded: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        let spki = try SubjectPublicKeyInfo(derEncoded: derEncoded, withIdentifier: identifier)
+        // Decode-boundary bridge (N5 Option A): init(spki:) validates the key algorithm
+        // and surfaces Certificate.Error / crypto-backend errors; map to the ASN.1 error.
+        do {
+            try self.init(spki: spki)
+        } catch {
+            throw ISO_8824.Error.invalidASN1Object(reason: "\(error)")
+        }
     }
 
     @inlinable
     public func serialize(
-        into coder: inout SwiftASN1.DER.Serializer,
-        withIdentifier identifier: SwiftASN1.ASN1Identifier
-    ) throws {
+        into coder: inout ISO_8825.DER.Serializer,
+        withIdentifier identifier: ISO_8824.Identifier
+    ) throws(ISO_8824.Error) {
         let spki = SubjectPublicKeyInfo(self)
         try spki.serialize(into: &coder, withIdentifier: identifier)
     }

@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 // TBSCertificate  ::=  SEQUENCE  {
 //      version         [0]  Version DEFAULT v1,
@@ -37,13 +38,13 @@ import SwiftASN1
 //
 // Extensions  ::=  SEQUENCE SIZE (1..MAX) OF Extension
 @usableFromInline
-typealias UniqueIdentifier = ASN1BitString
+typealias UniqueIdentifier = ISO_8824.BitString
 
 @usableFromInline
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-struct TBSCertificate: DERImplicitlyTaggable, Hashable, Sendable {
+struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -103,16 +104,16 @@ struct TBSCertificate: DERImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let version = try DER.decodeDefaultExplicitlyTagged(
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> TBSCertificate in
+            let version = try ISO_8825.DER.decodeDefaultExplicitlyTagged(
                 &nodes,
                 tagNumber: 0,
                 tagClass: .contextSpecific,
                 defaultValue: Int(0)
             )
             guard (0...2).contains(version) else {
-                throw ASN1Error.invalidASN1Object(reason: "Invalid X.509 version \(version)")
+                throw ISO_8824.Error.invalidASN1Object(reason: "Invalid X.509 version \(version)")
             }
 
             let serialNumber = try ArraySlice<UInt8>(derEncoded: &nodes)
@@ -121,16 +122,39 @@ struct TBSCertificate: DERImplicitlyTaggable, Hashable, Sendable {
             let validity = try Validity(derEncoded: &nodes)
             let subject = try DistinguishedName.derEncoded(&nodes)
             let subjectPublicKeyInfo = try SubjectPublicKeyInfo(derEncoded: &nodes)
-            let issuerUniqueID = try DER.optionalExplicitlyTagged(&nodes, tagNumber: 1, tagClass: .contextSpecific) {
-                try UniqueIdentifier(derEncoded: $0)
+            let issuerUniqueID = try ISO_8825.DER.optionalExplicitlyTagged(&nodes, tagNumber: 1, tagClass: .contextSpecific) {
+                (node: ISO_8825.Node) throws(ISO_8824.Error) -> UniqueIdentifier in
+                try UniqueIdentifier(derEncoded: node)
             }
-            let subjectUniqueID = try DER.optionalExplicitlyTagged(&nodes, tagNumber: 2, tagClass: .contextSpecific) {
-                try UniqueIdentifier(derEncoded: $0)
+            let subjectUniqueID = try ISO_8825.DER.optionalExplicitlyTagged(&nodes, tagNumber: 2, tagClass: .contextSpecific) {
+                (node: ISO_8825.Node) throws(ISO_8824.Error) -> UniqueIdentifier in
+                try UniqueIdentifier(derEncoded: node)
             }
-            let extensions = try DER.optionalExplicitlyTagged(&nodes, tagNumber: 3, tagClass: .contextSpecific) {
-                try DER.sequence(of: Certificate.Extension.self, identifier: .sequence, rootNode: $0)
+            let extensions = try ISO_8825.DER.optionalExplicitlyTagged(&nodes, tagNumber: 3, tagClass: .contextSpecific) {
+                (node: ISO_8825.Node) throws(ISO_8824.Error) -> [Certificate.Extension] in
+                try ISO_8825.DER.sequence(of: Certificate.Extension.self, identifier: .sequence, rootNode: node)
             }
 
+            // Decode-boundary bridge (N5 Option A): the DER.ImplicitlyTaggable conformance
+            // pins throws(ISO_8824.Error), but PublicKey(spki:) and Extensions(_:) validate
+            // (unsupported key algorithm, duplicate extension OID) and throw Certificate.Error.
+            // Map those to the ASN.1 error, preserving the detail; the typed Certificate.Error
+            // remains on the direct PublicKey(spki:)/Extensions(_:) APIs and at verify time.
+            // Catch-all (not just Certificate.Error): PublicKey(spki:) also surfaces
+            // crypto-backend errors on malformed key bytes. All are decode-boundary
+            // failures → map to the ASN.1 error, preserving the detail in the reason.
+            let publicKey: Certificate.PublicKey
+            do {
+                publicKey = try Certificate.PublicKey(spki: subjectPublicKeyInfo)
+            } catch {
+                throw ISO_8824.Error.invalidASN1Object(reason: "\(error)")
+            }
+            let parsedExtensions: Certificate.Extensions
+            do {
+                parsedExtensions = try Certificate.Extensions(extensions ?? [])
+            } catch {
+                throw ISO_8824.Error.invalidASN1Object(reason: "\(error)")
+            }
             return TBSCertificate(
                 version: Certificate.Version(rawValue: version),
                 serialNumber: Certificate.SerialNumber(bytes: serialNumber),
@@ -138,17 +162,17 @@ struct TBSCertificate: DERImplicitlyTaggable, Hashable, Sendable {
                 issuer: issuer,
                 validity: validity,
                 subject: subject,
-                publicKey: try Certificate.PublicKey(spki: subjectPublicKeyInfo),
+                publicKey: publicKey,
                 issuerUniqueID: issuerUniqueID,
                 subjectUniqueID: subjectUniqueID,
-                extensions: try Certificate.Extensions(extensions ?? [])
+                extensions: parsedExtensions
             )
         }
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             if self.version != .v1 {
                 try coder.serialize(self.version.rawValue, explicitlyTaggedWithTagNumber: 0, tagClass: .contextSpecific)
             }
@@ -165,7 +189,8 @@ struct TBSCertificate: DERImplicitlyTaggable, Hashable, Sendable {
                 try coder.serialize(subjectUniqueID, explicitlyTaggedWithTagNumber: 2, tagClass: .contextSpecific)
             }
             if self.extensions.count > 0 {
-                try coder.serialize(explicitlyTaggedWithTagNumber: 3, tagClass: .contextSpecific) { coder in
+                try coder.serialize(explicitlyTaggedWithTagNumber: 3, tagClass: .contextSpecific) {
+                    (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
                     try coder.serializeSequenceOf(extensions)
                 }
             }

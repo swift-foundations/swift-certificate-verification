@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// A distinguished name is a name that uniquely identifies a specific entity.
 ///
@@ -67,19 +68,6 @@ import SwiftASN1
 /// ```
 ///
 /// This produces an identical ``DistinguishedName`` to the prior example.
-///
-/// Additionally, users can take advantage of ``DistinguishedNameBuilder`` to use a result builder DSL to construct ``DistinguishedName`` objects.
-/// The above distinguished name can further be represented as:
-///
-/// ```swift
-/// let name = try DistinguishedName {
-///     CountryName("US")
-///     OrganizationName("Apple Inc.")
-///     CommonName("Apple Public EV Server ECC CA 1 - G1")
-/// }
-/// ```
-///
-/// This convenient shorthand is particularly valuable in testing, as well as in code that needs to generate certificates or CSRs.
 public struct DistinguishedName {
     @usableFromInline
     var rdns: [RelativeDistinguishedName]
@@ -108,26 +96,6 @@ public struct DistinguishedName {
     @inlinable
     public init() {
         self.rdns = []
-    }
-
-    /// Construct a ``DistinguishedName`` using a DSL.
-    ///
-    /// This API uses a result builder DSL to make it easier to construct complex
-    /// ``DistinguishedName``s. As an example, a ``DistinguishedName`` can be constructed
-    /// like this:
-    ///
-    /// ```swift
-    /// let name = try DistinguishedName {
-    ///     CountryName("US")
-    ///     OrganizationName("Apple Inc.")
-    ///     CommonName("Apple Public EV Server ECC CA 1 - G1")
-    /// }
-    /// ```
-    ///
-    /// - Parameter builder: The ``DistinguishedNameBuilder`` block.
-    @inlinable
-    public init(@DistinguishedNameBuilder builder: () throws -> Result<DistinguishedName, any Error>) throws {
-        self = try builder().get()
     }
 }
 
@@ -176,10 +144,10 @@ extension DistinguishedName: CustomDebugStringConvertible {
     }
 }
 
-extension DistinguishedName: DERSerializable {
+extension DistinguishedName: ISO_8825.DER.Serializable {
     @inlinable
-    public func serialize(into coder: inout DER.Serializer) throws {
-        try coder.appendConstructedNode(identifier: .sequence) { rootCoder in
+    public func serialize(into coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: .sequence) { (rootCoder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             for element in self.rdns {
                 try element.serialize(into: &rootCoder)
             }
@@ -187,37 +155,39 @@ extension DistinguishedName: DERSerializable {
     }
 }
 
-extension DistinguishedName: DERParseable {
+extension DistinguishedName: ISO_8825.DER.Parseable {
     @inlinable
-    public init(derEncoded rootNode: ASN1Node) throws {
-        self.rdns = try DER.sequence(of: RelativeDistinguishedName.self, identifier: .sequence, rootNode: rootNode)
+    public init(derEncoded rootNode: ISO_8825.Node) throws(ISO_8824.Error) {
+        self.rdns = try ISO_8825.DER.sequence(of: RelativeDistinguishedName.self, identifier: .sequence, rootNode: rootNode)
     }
 
     @inlinable
-    static func derEncoded(_ sequenceNodeIterator: inout ASN1NodeCollection.Iterator) throws -> DistinguishedName {
-        // This is a workaround for the fact that, even though the conformance to DERImplicitlyTaggable is
+    static func derEncoded(
+        _ sequenceNodeIterator: inout ISO_8825.Node.Collection.Iterator
+    ) throws(ISO_8824.Error) -> DistinguishedName {
+        // This is a workaround for the fact that, even though the conformance to ISO_8825.DER.ImplicitlyTaggable is
         // deprecated, Swift still prefers calling init(derEncoded:withIdentifier:) instead of this one.
-        let dnFactory: (inout ASN1NodeCollection.Iterator) throws -> DistinguishedName =
+        let dnFactory: (inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> DistinguishedName =
             DistinguishedName.init(derEncoded:)
         return try dnFactory(&sequenceNodeIterator)
     }
 }
 
 @available(*, deprecated, message: "Distinguished names may not be implicitly tagged")
-extension DistinguishedName: DERImplicitlyTaggable {
+extension DistinguishedName: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultIdentifier: ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @inlinable
-    public init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self.rdns = try DER.sequence(of: RelativeDistinguishedName.self, identifier: identifier, rootNode: rootNode)
+    public init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self.rdns = try ISO_8825.DER.sequence(of: RelativeDistinguishedName.self, identifier: identifier, rootNode: rootNode)
     }
 
     @inlinable
-    public func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { rootCoder in
+    public func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (rootCoder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             for element in self.rdns {
                 try element.serialize(into: &rootCoder)
             }

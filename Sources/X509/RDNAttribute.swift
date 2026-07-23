@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 extension RelativeDistinguishedName {
     /// A single attribute of a ``RelativeDistinguishedName``.
@@ -23,21 +24,21 @@ extension RelativeDistinguishedName {
     ///
     /// These attributes are a key-value type, with the type of the node being identified by
     /// ``type`` and the value being stored in ``value``. In the vast majority of cases the ``value``
-    /// of the node will be an `ASN1PrintableString` or `ASN1UTF8String`, but the value can only
+    /// of the node will be an `ISO_8824.PrintableString` or `ISO_8824.UTF8String`, but the value can only
     /// be derived by inspection.
     public struct Attribute {
         public struct Value: Hashable, Sendable {
             @usableFromInline
             enum Storage: Hashable, Sendable {
-                /// ``ASN1PrintableString``
+                /// ``ISO_8824.PrintableString``
                 case printable(String)
-                /// ``ASN1UTF8String``
+                /// ``ISO_8824.UTF8String``
                 case utf8(String)
-                /// ``ASN1IA5String``
+                /// ``ISO_8824.IA5String``
                 case ia5(String)
                 /// `.any` can never contain bytes which are equal to the DER representation of `.printable`, `.utf8` or `.ia5`.
                 /// This invariant must not be violated or otherwise the synthesised `Hashable` would be wrong.
-                case any(ASN1Any)
+                case any(ISO_8825.`Any`)
             }
 
             @usableFromInline
@@ -50,8 +51,8 @@ extension RelativeDistinguishedName {
         }
         /// The type of this attribute.
         ///
-        /// Common types can be found in `ASN1ObjectIdentifier.RDNAttributeType`.
-        public var type: ASN1ObjectIdentifier
+        /// Common types can be found in `ISO_8824.ObjectIdentifier.RDNAttributeType`.
+        public var type: ISO_8824.ObjectIdentifier
 
         /// The value of this attribute.
         public var value: Attribute.Value
@@ -61,66 +62,66 @@ extension RelativeDistinguishedName {
         /// - Parameter type: The type of the attribute.
         /// - Parameter value: The value of the attribute.
         @inlinable
-        public init(type: ASN1ObjectIdentifier, value: Attribute.Value) {
+        public init(type: ISO_8824.ObjectIdentifier, value: Attribute.Value) {
             self.type = type
             self.value = value
         }
     }
 }
 
-extension ASN1Any {
+extension ISO_8825.`Any` {
     @inlinable
     init(_ storage: RelativeDistinguishedName.Attribute.Value.Storage) {
         switch storage {
         case .printable(let printableString):
             // force try is safe because we verify in the initialiser that it is valid
-            self = try! .init(erasing: ASN1PrintableString(printableString))
+            self = try! .init(erasing: ISO_8824.PrintableString(printableString))
         case .utf8(let utf8String):
             // force try is safe because we verify in the initialiser that it is valid
-            self = try! .init(erasing: ASN1UTF8String(utf8String))
+            self = try! .init(erasing: ISO_8824.UTF8String(utf8String))
         case .ia5(let ia5String):
             // force try is safe because we verify in the initialiser that it is valid
-            self = try! .init(erasing: ASN1IA5String(ia5String))
+            self = try! .init(erasing: ISO_8824.IA5String(ia5String))
         case .any(let any):
             self = any
         }
     }
 }
 
-extension ASN1Any {
+extension ISO_8825.`Any` {
     @inlinable
     public init(_ value: RelativeDistinguishedName.Attribute.Value) {
-        self = ASN1Any(value.storage)
+        self = ISO_8825.`Any`(value.storage)
     }
 }
 
 extension RelativeDistinguishedName.Attribute.Value {
-    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ASN1UTF8String`.
+    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ISO_8824.UTF8String`.
     /// - Parameter utf8String: The value of the attribute.
     @inlinable
     public init(utf8String: String) {
         self.storage = .utf8(utf8String)
     }
 
-    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ASN1PrintableString`.
+    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ISO_8824.PrintableString`.
     /// - Parameter printableString: The value of the attribute.
     @inlinable
     public init(printableString: String) throws {
         // verify that it is indeed a printable string
-        _ = try ASN1PrintableString(printableString)
+        _ = try ISO_8824.PrintableString(printableString)
         self.storage = .printable(printableString)
     }
 
-    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ASN1IA5String`.
+    /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute/Value`` with an `ISO_8824.IA5String`.
     @inlinable
     public init(ia5String: String) throws {
-        // verify that it is indeed a ASN1IA5String
-        _ = try ASN1IA5String(ia5String)
+        // verify that it is indeed a ISO_8824.IA5String
+        _ = try ISO_8824.IA5String(ia5String)
         self.storage = .ia5(ia5String)
     }
 
     @inlinable
-    public init(asn1Any: ASN1Any) {
+    public init(asn1Any: ISO_8825.`Any`) {
         do {
             self.storage = try .init(asn1Any: asn1Any)
         } catch {
@@ -129,38 +130,38 @@ extension RelativeDistinguishedName.Attribute.Value {
     }
 }
 
-extension RelativeDistinguishedName.Attribute.Value.Storage: DERParseable, DERSerializable {
+extension RelativeDistinguishedName.Attribute.Value.Storage: ISO_8825.DER.Parseable, ISO_8825.DER.Serializable {
     @inlinable
-    init(derEncoded node: SwiftASN1.ASN1Node) throws {
+    init(derEncoded node: ISO_8825.Node) throws(ISO_8824.Error) {
         do {
             switch node.identifier {
-            case ASN1UTF8String.defaultIdentifier:
-                self = .utf8(String(try ASN1UTF8String(derEncoded: node)))
-            case ASN1PrintableString.defaultIdentifier:
-                self = .printable(String(try ASN1PrintableString(derEncoded: node)))
-            case ASN1IA5String.defaultIdentifier:
-                self = .ia5(String(try ASN1IA5String(derEncoded: node)))
+            case ISO_8824.UTF8String.defaultIdentifier:
+                self = .utf8(String(try ISO_8824.UTF8String(derEncoded: node)))
+            case ISO_8824.PrintableString.defaultIdentifier:
+                self = .printable(String(try ISO_8824.PrintableString(derEncoded: node)))
+            case ISO_8824.IA5String.defaultIdentifier:
+                self = .ia5(String(try ISO_8824.IA5String(derEncoded: node)))
             default:
-                self = .any(ASN1Any(derEncoded: node))
+                self = .any(ISO_8825.`Any`(derEncoded: node))
             }
         } catch {
-            self = .any(ASN1Any(derEncoded: node))
+            self = .any(ISO_8825.`Any`(derEncoded: node))
         }
     }
 
     @inlinable
-    func serialize(into coder: inout SwiftASN1.DER.Serializer) throws {
+    func serialize(into coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) {
         switch self {
         case .printable(let printableString):
             // force try is safe because we verify in the initialiser that it is valid
-            let printableString = try! ASN1PrintableString(printableString)
+            let printableString = try! ISO_8824.PrintableString(printableString)
             try printableString.serialize(into: &coder)
         case .utf8(let utf8String):
-            let string = ASN1UTF8String(utf8String)
+            let string = ISO_8824.UTF8String(utf8String)
             try string.serialize(into: &coder)
         case .ia5(let ia5String):
             // force try is safe because we verify in the initialiser that it is valid
-            let string = try! ASN1IA5String(ia5String)
+            let string = try! ISO_8824.IA5String(ia5String)
             try string.serialize(into: &coder)
         case .any(let any):
             try any.serialize(into: &coder)
@@ -175,35 +176,35 @@ extension RelativeDistinguishedName.Attribute.Value: CustomStringConvertible {
         if let string = String(self) {
             text = string
         } else {
-            text = String(describing: ASN1Any(self))
+            text = String(describing: ISO_8825.`Any`(self))
         }
 
         // This is a very slow way to do this, but until we have any evidence that
         // this is hot code I'm happy to do it slowly.
         let unescapedBytes = Array(text.utf8)
         let charsToEscape: [UInt8] = [
-            UInt8(ascii: ","), UInt8(ascii: "+"), UInt8(ascii: "\""), UInt8(ascii: "\\"),
-            UInt8(ascii: "<"), UInt8(ascii: ">"), UInt8(ascii: ";"),
+            UInt8(ascii: "," as Unicode.Scalar), UInt8(ascii: "+" as Unicode.Scalar), UInt8(ascii: "\"" as Unicode.Scalar), UInt8(ascii: "\\" as Unicode.Scalar),
+            UInt8(ascii: "<" as Unicode.Scalar), UInt8(ascii: ">" as Unicode.Scalar), UInt8(ascii: ";" as Unicode.Scalar),
         ]
 
         let leadingBytesToEscape = unescapedBytes.prefix(while: {
-            $0 == UInt8(ascii: " ") || $0 == UInt8(ascii: "#")
+            $0 == UInt8(ascii: " " as Unicode.Scalar) || $0 == UInt8(ascii: "#" as Unicode.Scalar)
         })
 
         // We don't want these ranges to overlap.
         let trailingBytesToEscape = unescapedBytes.dropFirst(leadingBytesToEscape.count).suffix(while: {
-            $0 == UInt8(ascii: " ")
+            $0 == UInt8(ascii: " " as Unicode.Scalar)
         })
         let middleBytes = unescapedBytes[leadingBytesToEscape.endIndex..<trailingBytesToEscape.startIndex]
 
-        var escapedBytes = leadingBytesToEscape.flatMap { [UInt8(ascii: "\\"), $0] }
+        var escapedBytes = leadingBytesToEscape.flatMap { [UInt8(ascii: "\\" as Unicode.Scalar), $0] }
         escapedBytes += middleBytes.flatMap {
             guard charsToEscape.contains($0) else {
                 return [$0]
             }
-            return [UInt8(ascii: "\\"), $0]
+            return [UInt8(ascii: "\\" as Unicode.Scalar), $0]
         }
-        escapedBytes += trailingBytesToEscape.flatMap { [UInt8(ascii: "\\"), $0] }
+        escapedBytes += trailingBytesToEscape.flatMap { [UInt8(ascii: "\\" as Unicode.Scalar), $0] }
 
         let escapedString = String(decoding: escapedBytes, as: UTF8.self)
         return escapedString
@@ -251,24 +252,24 @@ extension RelativeDistinguishedName.Attribute: CustomStringConvertible {
     }
 }
 
-extension RelativeDistinguishedName.Attribute: DERImplicitlyTaggable {
+extension RelativeDistinguishedName.Attribute: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultIdentifier: ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @inlinable
-    public init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let type = try ASN1ObjectIdentifier(derEncoded: &nodes)
+    public init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> RelativeDistinguishedName.Attribute in
+            let type = try ISO_8824.ObjectIdentifier(derEncoded: &nodes)
             let value = try Value(storage: .init(derEncoded: &nodes))
             return .init(type: type, value: value)
         }
     }
 
     @inlinable
-    public func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    public func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.type)
             try coder.serialize(self.value.storage)
         }
@@ -277,29 +278,29 @@ extension RelativeDistinguishedName.Attribute: DERImplicitlyTaggable {
 
 extension RelativeDistinguishedName.Attribute {
     /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute`` whose
-    /// value is an `ASN1UTF8String`.
+    /// value is an `ISO_8824.UTF8String`.
     ///
     /// - Parameter type: The type of the attribute.
     /// - Parameter utf8String: The value of the attribute.
     @inlinable
-    public init(type: ASN1ObjectIdentifier, utf8String: String) {
+    public init(type: ISO_8824.ObjectIdentifier, utf8String: String) {
         self.type = type
         self.value = .init(utf8String: utf8String)
     }
 
     /// A helper constructor to construct a ``RelativeDistinguishedName/Attribute`` whose
-    /// value is an `ASN1PrintableString`.
+    /// value is an `ISO_8824.PrintableString`.
     ///
     /// - Parameter type: The type of the attribute.
     /// - Parameter printableString: The value of the attribute.
     @inlinable
-    public init(type: ASN1ObjectIdentifier, printableString: String) throws {
+    public init(type: ISO_8824.ObjectIdentifier, printableString: String) throws {
         self.type = type
         self.value = try .init(printableString: printableString)
     }
 
     @inlinable
-    public init(type: ASN1ObjectIdentifier, ia5String: String) throws {
+    public init(type: ISO_8824.ObjectIdentifier, ia5String: String) throws {
         self.type = type
         self.value = try .init(ia5String: ia5String)
     }
@@ -307,53 +308,53 @@ extension RelativeDistinguishedName.Attribute {
     /// Create a new attribute from a given type and value.
     ///
     /// - Parameter type: The type of the attribute.
-    /// - Parameter value: The value of the attribute, wrapped in `ASN1Any`.
+    /// - Parameter value: The value of the attribute, wrapped in `ISO_8825.`Any``.
     @inlinable
-    public init(type: ASN1ObjectIdentifier, value: ASN1Any) {
+    public init(type: ISO_8824.ObjectIdentifier, value: ISO_8825.`Any`) {
         self.type = type
         self.value = .init(asn1Any: value)
     }
 }
 
-extension ASN1ObjectIdentifier {
+extension ISO_8824.ObjectIdentifier {
     /// Common object identifiers used within ``RelativeDistinguishedName/Attribute``s.
     public enum RDNAttributeType: Sendable {
         /// The 'countryName' attribute type contains a two-letter
         /// ISO 3166 country code.
-        public static let countryName: ASN1ObjectIdentifier = [2, 5, 4, 6]
+        public static let countryName: ISO_8824.ObjectIdentifier = [2, 5, 4, 6]
 
         /// The 'commonName' attribute type contains names of an
         /// object.
-        public static let commonName: ASN1ObjectIdentifier = [2, 5, 4, 3]
+        public static let commonName: ISO_8824.ObjectIdentifier = [2, 5, 4, 3]
 
         /// The 'localityName' attribute type contains names of a
         /// locality or place, such as a city, county, or other geographic
         /// region.
-        public static let localityName: ASN1ObjectIdentifier = [2, 5, 4, 7]
+        public static let localityName: ISO_8824.ObjectIdentifier = [2, 5, 4, 7]
 
         /// The 'stateOrProvinceName' attribute type contains the
         /// full names of states or provinces.
-        public static let stateOrProvinceName: ASN1ObjectIdentifier = [2, 5, 4, 8]
+        public static let stateOrProvinceName: ISO_8824.ObjectIdentifier = [2, 5, 4, 8]
 
         /// The 'organizationName' attribute type contains the
         /// names of an organization.
-        public static let organizationName: ASN1ObjectIdentifier = [2, 5, 4, 10]
+        public static let organizationName: ISO_8824.ObjectIdentifier = [2, 5, 4, 10]
 
         /// The 'organizationalUnitName' attribute type contains
         /// the names of an organizational unit.
-        public static let organizationalUnitName: ASN1ObjectIdentifier = [2, 5, 4, 11]
+        public static let organizationalUnitName: ISO_8824.ObjectIdentifier = [2, 5, 4, 11]
 
         /// The 'streetAddress' attribute type contains site
         /// information from a postal address (i.e., the street name, place,
         /// avenue, and the house number).
-        public static let streetAddress: ASN1ObjectIdentifier = [2, 5, 4, 9]
+        public static let streetAddress: ISO_8824.ObjectIdentifier = [2, 5, 4, 9]
 
         /// The `domainComponent` attribute type contains parts (labels) of a DNS domain name
-        public static let domainComponent: ASN1ObjectIdentifier = [0, 9, 2342, 19_200_300, 100, 1, 25]
+        public static let domainComponent: ISO_8824.ObjectIdentifier = [0, 9, 2342, 19_200_300, 100, 1, 25]
 
         /// The `emailAddress` attribute type contains email address defined in PCKS#9 (RFC2985).
         /// Be aware that, modern best practices (e.g., RFC 5280) discourage embedding email addresses in the `Subject DN` instead it should be in  `Subject Alternative Name (SAN)
-        public static let emailAddress: ASN1ObjectIdentifier = [1, 2, 840, 113549, 1, 9, 1]
+        public static let emailAddress: ISO_8824.ObjectIdentifier = [1, 2, 840, 113549, 1, 9, 1]
     }
 }
 

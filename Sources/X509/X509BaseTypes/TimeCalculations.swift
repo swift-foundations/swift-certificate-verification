@@ -144,7 +144,9 @@ extension Int64 {
         // a much larger number and we didn't need checked math then, so we don't need it now.
         var years = remyears + (4 &* qCycles) + (100 &* cCycles) + (400 &* qcCycles)
 
-        var months = 0
+        // Pin to stdlib Int: a bare `0` literal otherwise defaults to byte-primitives'
+        // Carrier integer type when it is in scope (owner-fix routed).
+        var months: Int = 0
         while Int64.daysInMonth(months) <= remdays {
             remdays -= Int64.daysInMonth(months)
 
@@ -167,11 +169,12 @@ extension Int64 {
         // Same for remdays, the loop only terminates if the number is smaller than at most 31.
         //
         // Note that, unlike struct tm, we return ordinal month numbers as well as days (i.e. 1 to 12).
-        // This fits us better when working with GeneralizedTime and friends.
+        // This fits us better when working with ISO_8824.GeneralizedTime and friends.
         return (
             year: Int(years + 2000),
-            month: Int(months &+ 3),
-            day: Int(remdays &+ 1),
+            // `months` is stdlib Int (pinned above); day derives from Int64 remdays.
+            month: months + 3,
+            day: Int(remdays + 1),
             hours: Int(remsecs / 3600),
             minutes: Int(remsecs / 60 % 60),
             seconds: Int(remsecs % 60)

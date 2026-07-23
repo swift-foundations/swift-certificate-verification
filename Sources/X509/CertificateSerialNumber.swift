@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
@@ -60,30 +61,10 @@ extension Certificate {
         /// - Parameter number: The raw big-endian bytes of the serial number.
         @inlinable
         public init<Number: FixedWidthInteger>(_ number: Number) {
-            // `IntegerBytesCollection` already trims leading zeros
-            self.bytes = ArraySlice(IntegerBytesCollection(number))
+            // `ISO_8824.Integer.Bytes` already trims leading zeros
+            self.bytes = ArraySlice(ISO_8824.Integer.Bytes(number))
         }
 
-        /// Construct a random 20-byte serial number.
-        ///
-        /// Serial numbers should be generated randomly, and may contain up to 20 bytes. This
-        /// initializer generates an appropriate serial number.
-        @inlinable
-        public init() {
-            var rng = SystemRandomNumberGenerator()
-            self.init(generator: &rng)
-        }
-
-        /// Construct a random 20-byte serial number.
-        ///
-        /// Serial numbers should be generated randomly, and may contain up to 20 bytes. This
-        /// initializer generates a serial number with random numbers from the given `generator`.
-        /// - Parameter generator: the generator used to generate random number for the serial number
-        @inlinable
-        internal init(generator: inout some RandomNumberGenerator) {
-            // drop leading zeros as required by the ASN.1 spec for INTEGERs
-            self.bytes = ArraySlice(normalisingToASN1IntegerForm: generator.bytes(count: 20))
-        }
     }
 }
 

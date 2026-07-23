@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Provides details on how to access information about the certificate issuer.
 ///
@@ -43,13 +44,13 @@ public struct AuthorityInformationAccess {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.authorityInformationAccess`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.authorityInformationAccess`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.authorityInformationAccess else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.authorityInformationAccess), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.authorityInformationAccess, found: ext.oid)
             )
         }
 
@@ -156,7 +157,7 @@ extension AuthorityInformationAccess.AccessDescription {
         enum Backing {
             case ocspServer
             case issuingCA
-            case unknownType(ASN1ObjectIdentifier)
+            case unknownType(ISO_8824.ObjectIdentifier)
         }
 
         @inlinable
@@ -165,7 +166,7 @@ extension AuthorityInformationAccess.AccessDescription {
         }
 
         @inlinable
-        init(_ oid: ASN1ObjectIdentifier) {
+        init(_ oid: ISO_8824.ObjectIdentifier) {
             switch oid {
             case .AccessMethodIdentifiers.ocspServer:
                 self.backing = .ocspServer
@@ -229,20 +230,13 @@ extension Certificate.Extension {
     @inlinable
     public init(_ aia: AuthorityInformationAccess, critical: Bool) throws {
         let asn1Representation = AuthorityInfoAccessSyntax(aia)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(
             oid: .X509ExtensionID.authorityInformationAccess,
             critical: critical,
             value: serializer.serializedBytes[...]
         )
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension AuthorityInformationAccess: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
     }
 }
 
@@ -255,9 +249,9 @@ extension AuthorityInformationAccess: CertificateExtensionConvertible {
 //         accessMethod          OBJECT IDENTIFIER,
 //         accessLocation        GeneralName  }
 @usableFromInline
-struct AuthorityInfoAccessSyntax: DERImplicitlyTaggable, Sendable {
+struct AuthorityInfoAccessSyntax: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -270,13 +264,13 @@ struct AuthorityInfoAccessSyntax: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self.descriptions = try DER.sequence(of: AIAAccessDescription.self, identifier: identifier, rootNode: rootNode)
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self.descriptions = try ISO_8825.DER.sequence(of: AIAAccessDescription.self, identifier: identifier, rootNode: rootNode)
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             for description in descriptions {
                 try coder.serialize(description)
             }
@@ -285,56 +279,56 @@ struct AuthorityInfoAccessSyntax: DERImplicitlyTaggable, Sendable {
 }
 
 @usableFromInline
-struct AIAAccessDescription: DERImplicitlyTaggable, Sendable {
+struct AIAAccessDescription: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @usableFromInline
-    var accessMethod: ASN1ObjectIdentifier
+    var accessMethod: ISO_8824.ObjectIdentifier
 
     @usableFromInline
     var accessLocation: GeneralName
 
     @inlinable
-    init(accessMethod: ASN1ObjectIdentifier, accessLocation: GeneralName) {
+    init(accessMethod: ISO_8824.ObjectIdentifier, accessLocation: GeneralName) {
         self.accessMethod = accessMethod
         self.accessLocation = accessLocation
     }
 
     @inlinable
     init(_ description: AuthorityInformationAccess.AccessDescription) {
-        self.accessMethod = ASN1ObjectIdentifier(accessMethod: description.method)
+        self.accessMethod = ISO_8824.ObjectIdentifier(accessMethod: description.method)
         self.accessLocation = description.location
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let accessMethod = try ASN1ObjectIdentifier(derEncoded: &nodes)
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> AIAAccessDescription in
+            let accessMethod = try ISO_8824.ObjectIdentifier(derEncoded: &nodes)
             let accessLocation = try GeneralName(derEncoded: &nodes)
             return AIAAccessDescription(accessMethod: accessMethod, accessLocation: accessLocation)
         }
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.accessMethod)
             try coder.serialize(self.accessLocation)
         }
     }
 }
 
-extension ASN1ObjectIdentifier {
+extension ISO_8824.ObjectIdentifier {
     @usableFromInline
     enum AccessMethodIdentifiers: Sendable {
         @usableFromInline
-        static let ocspServer: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 48, 1]
+        static let ocspServer: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 48, 1]
 
         @usableFromInline
-        static let issuingCA: ASN1ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 48, 2]
+        static let issuingCA: ISO_8824.ObjectIdentifier = [1, 3, 6, 1, 5, 5, 7, 48, 2]
     }
 
     @inlinable

@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 import Crypto
 import struct Foundation.Data
 
@@ -38,17 +39,17 @@ public struct SubjectKeyIdentifier {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.subjectKeyIdentifier`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.subjectKeyIdentifier`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.subjectKeyIdentifier else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.subjectKeyIdentifier), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.subjectKeyIdentifier, found: ext.oid)
             )
         }
 
-        let asn1KeyIdentifier = try ASN1OctetString(derEncoded: ext.value)
+        let asn1KeyIdentifier = try ISO_8824.OctetString(derEncoded: ext.value)
         self.keyIdentifier = asn1KeyIdentifier.bytes
     }
 }
@@ -78,21 +79,14 @@ extension Certificate.Extension {
     ///   - critical: Whether this extension should have the critical bit set.
     @inlinable
     public init(_ ski: SubjectKeyIdentifier, critical: Bool) throws {
-        let asn1Representation = ASN1OctetString(contentBytes: ski.keyIdentifier)
-        var serializer = DER.Serializer()
+        let asn1Representation = ISO_8824.OctetString(contentBytes: ski.keyIdentifier)
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(
             oid: .X509ExtensionID.subjectKeyIdentifier,
             critical: critical,
             value: serializer.serializedBytes[...]
         )
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension SubjectKeyIdentifier: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
     }
 }
 

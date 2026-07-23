@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
-import _CertificateInternals
+import ISO_8824
+import ISO_8825
+import Certificate_Internals
 
 /// A ``RelativeDistinguishedName`` is a collection of elements at a single level of a hierarchical
 /// ``DistinguishedName``.
@@ -56,8 +57,16 @@ public struct RelativeDistinguishedName {
     }
 
     @inlinable
-    init(_ attributes: DER.LazySetOfSequence<Attribute>) throws {
-        self.attributes = try .init(attributes)
+    init(_ attributes: ISO_8825.DER.LazySetOfSequence<Attribute>) throws(ISO_8824.Error) {
+        // _TinyArray's Result-sequence init is untyped `throws`; the LazySetOfSequence
+        // only ever surfaces ISO_8824.Error, so re-throw it unwrapped (preserving detail).
+        do {
+            self.attributes = try .init(attributes)
+        } catch let error as ISO_8824.Error {
+            throw error
+        } catch {
+            throw ISO_8824.Error.invalidASN1Object(reason: "\(error)")
+        }
         Self._sortElements(&self.attributes)
     }
 
@@ -148,19 +157,19 @@ extension RelativeDistinguishedName: CustomDebugStringConvertible {
     }
 }
 
-extension RelativeDistinguishedName: DERImplicitlyTaggable {
+extension RelativeDistinguishedName: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultIdentifier: ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         .set
     }
 
     @inlinable
-    public init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        try self.init(DER.lazySet(identifier: identifier, rootNode: rootNode))
+    public init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try self.init(ISO_8825.DER.lazySet(identifier: identifier, rootNode: rootNode))
     }
 
     @inlinable
-    public func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
+    public func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         try coder.serializeSetOf(self.attributes, identifier: identifier)
     }
 
@@ -171,11 +180,11 @@ extension RelativeDistinguishedName: DERImplicitlyTaggable {
         // This is weird. We need to individually serialize each element, then lexicographically compare
         // them and then write them out. We could do this in place but for now let's not worry about it.
         try! elements.sort { lhs, rhs in
-            var serializer = DER.Serializer()
+            var serializer = ISO_8825.DER.Serializer()
             try serializer.serialize(lhs)
             let lhsBytes = serializer.serializedBytes
 
-            serializer = DER.Serializer()
+            serializer = ISO_8825.DER.Serializer()
             try serializer.serialize(rhs)
             let rhsBytes = serializer.serializedBytes
 

@@ -12,12 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import SwiftASN1
+import ISO_8824
+import ISO_8825
+import Time_Primitive
 
 /// A representation of an X.509 certificate object.
 ///
@@ -62,13 +59,6 @@ import SwiftASN1
 /// across the rest of the data. Allowing users to change this data makes it easy to accidentally modify
 /// a ``Certificate`` in one part of your code and not realise that the signature has inevitably
 /// been invalidated.
-#if canImport(Security)
-///
-/// ### Creating Certificates from SecCertificate and vice versa
-///
-/// An instance of ``Certificate`` can be created from ``Security/SecCertificate`` (from the ``Security`` framework) with ``Certificate/init(_:)``.
-/// The opposite, that is, creating an instance of ``Security/SecCertificate`` from ``Certificate``, can be achieved with ``Security/SecCertificate/makeWithCertificate(_:)``.
-#endif
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct Certificate {
     /// The X.509 version of this certificate.
@@ -97,16 +87,16 @@ public struct Certificate {
         self.tbsCertificate.publicKey
     }
 
-    /// The date before which this certificate is not valid.
+    /// The instant before which this certificate is not valid.
     @inlinable
-    public var notValidBefore: Date {
-        Date(self.tbsCertificate.validity.notBefore)
+    public var notValidBefore: Instant {
+        Instant(self.tbsCertificate.validity.notBefore)
     }
 
-    /// The date after which this certificate is not valid.
+    /// The instant after which this certificate is not valid.
     @inlinable
-    public var notValidAfter: Date {
-        Date(self.tbsCertificate.validity.notAfter)
+    public var notValidAfter: Instant {
+        Instant(self.tbsCertificate.validity.notAfter)
     }
 
     /// The ``DistinguishedName`` of the issuer of this certificate.
@@ -157,183 +147,26 @@ public struct Certificate {
     @usableFromInline
     internal let signatureAlgorithmBytes: ArraySlice<UInt8>
 
-    /// Construct a certificate from constituent parts, signed by an issuer key.
-    ///
-    /// This API can be used to construct a ``Certificate`` directly, without an intermediary
-    /// Certificate Signing Request. The ``signature-swift.property`` for this certificate will be produced
-    /// automatically, using `issuerPrivateKey`.
-    ///
-    /// This API can be used to construct a self-signed key by passing the private key for `publicKey` as the
-    /// `issuerPrivateKey` argument.
-    ///
-    /// - Parameters:
-    ///   - version: The X.509 specification version for this certificate.
-    ///   - serialNumber: The serial number of this certificate.
-    ///   - publicKey: The public key associated with this certificate.
-    ///   - notValidBefore: The date before which this certificate is not valid.
-    ///   - notValidAfter: The date after which this certificate is not valid.
-    ///   - issuer: The ``DistinguishedName`` of the issuer of this certificate.
-    ///   - subject: The ``DistinguishedName`` of the subject of this certificate.
-    ///   - signatureAlgorithm: The signature algorithm that will be used to produce `signature`. Must be compatible with the private key type.
-    ///   - extensions: The extensions on this certificate.
-    ///   - issuerPrivateKey: The private key to use to sign this certificate.
-    @inlinable
-    public init(
-        version: Version,
-        serialNumber: SerialNumber,
-        publicKey: PublicKey,
-        notValidBefore: Date,
-        notValidAfter: Date,
-        issuer: DistinguishedName,
-        subject: DistinguishedName,
-        signatureAlgorithm: SignatureAlgorithm,
-        extensions: Extensions,
-        issuerPrivateKey: PrivateKey
-    ) throws {
-        self.tbsCertificate = TBSCertificate(
-            version: version,
-            serialNumber: serialNumber,
-            signature: signatureAlgorithm,
-            issuer: issuer,
-            validity: try Validity(
-                notBefore: .makeTime(from: notValidBefore),
-                notAfter: .makeTime(from: notValidAfter)
-            ),
-            subject: subject,
-            publicKey: publicKey,
-            extensions: extensions
-        )
-        self.signatureAlgorithm = signatureAlgorithm
-
-        let tbsCertificateBytes = try DER.Serializer.serialized(element: self.tbsCertificate)[...]
-        self.signature = try issuerPrivateKey.sign(bytes: tbsCertificateBytes, signatureAlgorithm: signatureAlgorithm)
-        self.tbsCertificateBytes = tbsCertificateBytes
-        self.signatureAlgorithmBytes = try DER.Serializer.serialized(
-            element: AlgorithmIdentifier(self.signatureAlgorithm)
-        )[...]
-        self.signatureBytes = try DER.Serializer.serialized(element: ASN1BitString(self.signature))[...]
-    }
-
-    /// Construct a certificate from constituent parts, signed by an issuer key.
-    ///
-    /// This API can be used to construct a ``Certificate`` directly, without an intermediary
-    /// Certificate Signing Request. The ``signature-swift.property`` for this certificate will be produced
-    /// automatically, using `issuerAsyncPrivateKey`.
-    ///
-    /// This API can be used to construct a self-signed key by passing the private key for `publicKey` as the
-    /// `issuerAsyncPrivateKey` argument.
-    ///
-    /// - Parameters:
-    ///   - version: The X.509 specification version for this certificate.
-    ///   - serialNumber: The serial number of this certificate.
-    ///   - publicKey: The public key associated with this certificate.
-    ///   - notValidBefore: The date before which this certificate is not valid.
-    ///   - notValidAfter: The date after which this certificate is not valid.
-    ///   - issuer: The ``DistinguishedName`` of the issuer of this certificate.
-    ///   - subject: The ``DistinguishedName`` of the subject of this certificate.
-    ///   - signatureAlgorithm: The signature algorithm that will be used to produce `signature`. Must be compatible with the private key type.
-    ///   - extensions: The extensions on this certificate.
-    ///   - issuerAsyncPrivateKey: The private key to use to sign this certificate.
-    @inlinable
-    public init(
-        version: Version,
-        serialNumber: SerialNumber,
-        publicKey: PublicKey,
-        notValidBefore: Date,
-        notValidAfter: Date,
-        issuer: DistinguishedName,
-        subject: DistinguishedName,
-        signatureAlgorithm: SignatureAlgorithm,
-        extensions: Extensions,
-        issuerAsyncPrivateKey: PrivateKey
-    ) async throws {
-        self.tbsCertificate = TBSCertificate(
-            version: version,
-            serialNumber: serialNumber,
-            signature: signatureAlgorithm,
-            issuer: issuer,
-            validity: try Validity(
-                notBefore: .makeTime(from: notValidBefore),
-                notAfter: .makeTime(from: notValidAfter)
-            ),
-            subject: subject,
-            publicKey: publicKey,
-            extensions: extensions
-        )
-        self.signatureAlgorithm = signatureAlgorithm
-
-        let tbsCertificateBytes = try DER.Serializer.serialized(element: self.tbsCertificate)[...]
-        self.signature = try await issuerAsyncPrivateKey.signAsynchronously(
-            bytes: tbsCertificateBytes,
-            signatureAlgorithm: signatureAlgorithm
-        )
-        self.tbsCertificateBytes = tbsCertificateBytes
-        self.signatureAlgorithmBytes = try DER.Serializer.serialized(
-            element: AlgorithmIdentifier(self.signatureAlgorithm)
-        )[...]
-        self.signatureBytes = try DER.Serializer.serialized(element: ASN1BitString(self.signature))[...]
-    }
-
-    /// Construct a certificate from constituent parts, signed by an issuer key.
-    ///
-    /// This API can be used to construct a ``Certificate`` directly, without an intermediary
-    /// Certificate Signing Request. The ``signature-swift.property`` for this certificate will be produced
-    /// automatically, using `issuerPrivateKey`.
-    ///
-    /// A default signature algorithm to use for the signature of this certificate is automatically chosen based
-    /// on the type of the issuer's private key.
-    ///
-    /// This API can be used to construct a self-signed key by passing the private key for `publicKey` as the
-    /// `issuerPrivateKey` argument.
-    ///
-    /// - Parameters:
-    ///   - version: The X.509 specification version for this certificate.
-    ///   - serialNumber: The serial number of this certificate.
-    ///   - publicKey: The public key associated with this certificate.
-    ///   - notValidBefore: The date before which this certificate is not valid.
-    ///   - notValidAfter: The date after which this certificate is not valid.
-    ///   - issuer: The ``DistinguishedName`` of the issuer of this certificate.
-    ///   - subject: The ``DistinguishedName`` of the subject of this certificate.
-    ///   - extensions: The extensions on this certificate.
-    ///   - issuerPrivateKey: The private key to use to sign this certificate.
-    @inlinable
-    public init(
-        version: Version,
-        serialNumber: SerialNumber,
-        publicKey: PublicKey,
-        notValidBefore: Date,
-        notValidAfter: Date,
-        issuer: DistinguishedName,
-        subject: DistinguishedName,
-        extensions: Extensions,
-        issuerPrivateKey: PrivateKey
-    ) throws {
-        try self.init(
-            version: version,
-            serialNumber: serialNumber,
-            publicKey: publicKey,
-            notValidBefore: notValidBefore,
-            notValidAfter: notValidAfter,
-            issuer: issuer,
-            subject: subject,
-            signatureAlgorithm: issuerPrivateKey.defaultSignatureAlgorithm,
-            extensions: extensions,
-            issuerPrivateKey: issuerPrivateKey
-        )
-    }
-
     @inlinable
     init(
         tbsCertificate: TBSCertificate,
         signatureAlgorithm: AlgorithmIdentifier,
-        signature: ASN1BitString,
+        signature: ISO_8824.BitString,
         tbsCertificateBytes: ArraySlice<UInt8>,
         signatureAlgorithmBytes: ArraySlice<UInt8>,
         signatureBytes: ArraySlice<UInt8>
-    ) throws {
+    ) throws(ISO_8824.Error) {
         self.tbsCertificate = tbsCertificate
         self.signatureAlgorithm = SignatureAlgorithm(algorithmIdentifier: signatureAlgorithm)
-        self.signature = try Signature(signatureAlgorithm: self.signatureAlgorithm, signatureBytes: signature)
+        // Decode-boundary bridge (N5 Option A): the DER.ImplicitlyTaggable conformance
+        // pins throws(ISO_8824.Error), but Signature construction validates the algorithm
+        // and throws Certificate.Error. Map it to the ASN.1 error, preserving the detail.
+        // The typed Certificate.Error remains on the direct Signature(_:) API and at verify time.
+        do {
+            self.signature = try Signature(signatureAlgorithm: self.signatureAlgorithm, signatureBytes: signature)
+        } catch {
+            throw ISO_8824.Error.invalidASN1Object(reason: "\(error)")
+        }
         self.tbsCertificateBytes = tbsCertificateBytes
         self.signatureAlgorithmBytes = signatureAlgorithmBytes
         self.signatureBytes = signatureBytes
@@ -380,24 +213,24 @@ extension Certificate: CustomStringConvertible {
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate: DERImplicitlyTaggable {
+extension Certificate: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultIdentifier: ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @inlinable
-    public init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
+    public init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> Certificate in
             guard let tbsCertificateNode = nodes.next(),
                 let signatureAlgorithmNode = nodes.next(),
                 let signatureNode = nodes.next()
             else {
-                throw ASN1Error.invalidASN1Object(reason: "Invalid certificate object, insufficient ASN.1 nodes")
+                throw ISO_8824.Error.invalidASN1Object(reason: "Invalid certificate object, insufficient ASN.1 nodes")
             }
             let tbsCertificate = try TBSCertificate(derEncoded: tbsCertificateNode)
             let signatureAlgorithm = try AlgorithmIdentifier(derEncoded: signatureAlgorithmNode)
-            let signature = try ASN1BitString(derEncoded: signatureNode)
+            let signature = try ISO_8824.BitString(derEncoded: signatureNode)
             return try Certificate(
                 tbsCertificate: tbsCertificate,
                 signatureAlgorithm: signatureAlgorithm,
@@ -410,7 +243,7 @@ extension Certificate: DERImplicitlyTaggable {
     }
 
     @inlinable
-    public func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
+    public func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         coder.appendConstructedNode(identifier: identifier) { coder in
             coder.serializeRawBytes(self.tbsCertificateBytes)
             coder.serializeRawBytes(self.signatureAlgorithmBytes)
@@ -419,48 +252,13 @@ extension Certificate: DERImplicitlyTaggable {
     }
 }
 
-extension DER.Serializer {
+extension ISO_8825.DER.Serializer {
     @inlinable
-    static func serialized<Element: DERSerializable>(element: Element) throws -> [UInt8] {
-        var serializer = DER.Serializer()
+    static func serialized<Element: ISO_8825.DER.Serializable>(element: Element) throws -> [UInt8] {
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(element)
         return serializer.serializedBytes
     }
 
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate: PEMRepresentable {
-    @inlinable
-    public static var defaultPEMDiscriminator: String { "CERTIFICATE" }
-}
-
-#if canImport(Security)
-import Security
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate {
-    /// Creates an instance of ``Certificate`` from ``Security/SecCertificate``.
-    /// To create an instance of ``Security/SecCertificate``, use ``Security/SecCertificate/makeWithCertificate(_:)`` instead.
-    /// - Parameter certificate: The `SecCertificate` instance used to initialize this new `Certificate` instance
-    public init(_ certificate: SecCertificate) throws {
-        try self.init(derEncoded: Array(SecCertificateCopyData(certificate) as Data))
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension SecCertificate {
-    /// Creates an instance of ``Security/SecCertificate`` from ``Certificate``.
-    /// To create an instance of ``Certificate``, use ``Certificate/init(_:)`` instead.
-    /// - Parameter certificate: The `Certificate` instance used to initialize this new `SecCertificate` instance
-    /// - Returns: A new `SecCertificate` instance based on the provided `Certificate` instance
-    public static func makeWithCertificate(_ certificate: Certificate) throws -> SecCertificate {
-        var coder = DER.Serializer()
-        try certificate.serialize(into: &coder)
-
-        let derData = Data(coder.serializedBytes)
-
-        return SecCertificateCreateWithData(nil, derData as CFData)!
-    }
-}
-#endif

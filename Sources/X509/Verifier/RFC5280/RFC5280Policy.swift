@@ -11,12 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import SwiftASN1
+import ISO_8824
+import ISO_8825
+import Time_Primitive
 
 /// A ``VerifierPolicy`` that implements the core chain verifying policies from RFC 5280.
 ///
@@ -29,7 +26,7 @@ import SwiftASN1
 /// 4. Name Constraints. Police the constraints contained in the ``NameConstraints`` extension.
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct RFC5280Policy: VerifierPolicy, Sendable {
-    public let verifyingCriticalExtensions: [ASN1ObjectIdentifier] = [
+    public let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] = [
         .X509ExtensionID.basicConstraints,
         .X509ExtensionID.nameConstraints,
 
@@ -47,7 +44,7 @@ public struct RFC5280Policy: VerifierPolicy, Sendable {
     let versionPolicy: VersionPolicy
 
     @usableFromInline
-    let expiryPolicy: ExpiryPolicy?
+    let expiryPolicy: ExpiryPolicy
 
     @usableFromInline
     let basicConstraintsPolicy: BasicConstraintsPolicy
@@ -55,74 +52,21 @@ public struct RFC5280Policy: VerifierPolicy, Sendable {
     @usableFromInline
     let nameConstraintsPolicy: NameConstraintsPolicy
 
+    /// Creates an instance that validates expiry against the injected
+    /// `validationTime`.
+    ///
+    /// The verifier never reads a system clock: the instant a chain is
+    /// evaluated against is always supplied by the caller.
+    ///
+    /// - Parameter validationTime: The instant to compare against when
+    ///   determining whether the certificates in the chain are within their
+    ///   validity interval.
     @inlinable
-    // private but @inlinable
-    init(expiryPolicy: ExpiryPolicy?) {
+    public init(validationTime: Instant) {
         self.versionPolicy = VersionPolicy()
-        self.expiryPolicy = expiryPolicy
+        self.expiryPolicy = ExpiryPolicy(validationTime: validationTime)
         self.basicConstraintsPolicy = BasicConstraintsPolicy()
         self.nameConstraintsPolicy = NameConstraintsPolicy()
-    }
-
-    @inlinable
-    @available(
-        *,
-        deprecated,
-        message:
-            "Use init() to validated expiry against the current time. Otherwise, to validate against a fixed time, import with @_spi(FixedExpiryValidationTime) and use init(fixedExpiryValidationTime:)."
-    )
-    public init(validationTime: Date) {
-        self.init(expiryPolicy: ExpiryPolicy(fixedValidationTime: validationTime))
-    }
-
-    /// Creates an instance with an optional *fixed* expiry validation time.
-    ///
-    /// - Parameter fixedValidationTime: The *fixed* time to compare against when determining if the certificates in the chain have expired. A fixed
-    ///   time is a *specific* time, either in the past or future, but **not** the current time. To compare against the current time *at the point of validation*,
-    ///   pass `nil` to `fixedValidationTime`.
-    ///
-    /// - Important: Pass `nil` to `fixedValidationTime` for the current time to be obtained at the time of validation and then used for the
-    ///   comparison; the validation method may be invoked long after initialization.
-    @inlinable
-    @available(
-        *,
-        deprecated,
-        message:
-            "Use init() to validated expiry against the current time. Otherwise, to validate against a fixed time, import with @_spi(FixedExpiryValidationTime) and use init(fixedExpiryValidationTime:)."
-    )
-    public init(fixedValidationTime: Date? = nil) {
-        if let fixedValidationTime {
-            self.init(expiryPolicy: ExpiryPolicy(fixedValidationTime: fixedValidationTime))
-        } else {
-            self.init(expiryPolicy: ExpiryPolicy())
-        }
-    }
-
-    /// - Note: Certificate expiry is validated against the *current* time (evaluated at the point of validation)
-    @inlinable
-    public init() {
-        self.init(expiryPolicy: ExpiryPolicy())
-    }
-
-    /// Creates an instance with a **fixed** time to validate certificate expiry against (a predetermined time *either*
-    /// in the past or future)
-    ///
-    /// - Parameter fixedExpiryValidationTime: The *fixed* time to compare against when determining if the certificates
-    ///   in the chain have expired. A fixed time is a predetermined time, either in the past or future, but **not** the
-    ///   current time. To compare against the current time *at the point of validation*, use ``init()``.
-    ///
-    /// - Warning: Only use this initializer if you want to validate the certificates against a *fixed* time. Most users
-    ///   should use ``init()``: the expiry of the certificates will be validated against the current time (evaluated at
-    ///   the point of validation) when using that initializer.
-    @inlinable
-    @_spi(FixedExpiryValidationTime)
-    public init(fixedExpiryValidationTime: Date) {
-        self.init(expiryPolicy: ExpiryPolicy(fixedValidationTime: fixedExpiryValidationTime))
-    }
-
-    @_spi(DisableValidityCheck)
-    public static func withValidityCheckDisabled() -> RFC5280Policy {
-        return RFC5280Policy(expiryPolicy: nil)
     }
 
     @inlinable
@@ -130,9 +74,7 @@ public struct RFC5280Policy: VerifierPolicy, Sendable {
         if case .failsToMeetPolicy(let reason) = self.versionPolicy.chainMeetsPolicyRequirements(chain: chain) {
             return .failsToMeetPolicy(reason: reason)
         }
-        if let expiryPolicy = self.expiryPolicy,
-            case .failsToMeetPolicy(let reason) = expiryPolicy.chainMeetsPolicyRequirements(chain: chain)
-        {
+        if case .failsToMeetPolicy(let reason) = self.expiryPolicy.chainMeetsPolicyRequirements(chain: chain) {
             return .failsToMeetPolicy(reason: reason)
         }
 

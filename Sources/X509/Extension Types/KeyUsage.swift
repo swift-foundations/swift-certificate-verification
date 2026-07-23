@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Defines the purpose of the key contained in the certificate.
 ///
@@ -85,17 +86,17 @@ public struct KeyUsage {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.keyUsage`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.keyUsage`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.keyUsage else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.keyUsage), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.keyUsage, found: ext.oid)
             )
         }
 
-        let keyUsageValue = try ASN1BitString(derEncoded: ext.value)
+        let keyUsageValue = try ISO_8824.BitString(derEncoded: ext.value)
         try Self.validateBitString(keyUsageValue)
         self.rawValue = UInt16(keyUsageValue)
     }
@@ -249,7 +250,7 @@ public struct KeyUsage {
     }
 
     @inlinable
-    internal static func validateBitString(_ bitstring: ASN1BitString) throws {
+    internal static func validateBitString(_ bitstring: ISO_8824.BitString) throws {
         switch bitstring.bytes.count {
         case 0:
             // This is fine, no bits are set.
@@ -261,16 +262,16 @@ public struct KeyUsage {
             precondition(bitstring.paddingBits < 8)
             let bitMask = UInt8(0x01) << bitstring.paddingBits
             if (bitstring.bytes[bitstring.bytes.startIndex] & bitMask) == 0 {
-                throw ASN1Error.invalidASN1Object(reason: "Invalid leading padding bit")
+                throw ISO_8824.Error.invalidASN1Object(reason: "Invalid leading padding bit")
             }
         case 2 where bitstring.paddingBits == 7:
             // This is fine, there are 9 valid bits: 8 from the prior byte and 1 here.
             if (bitstring.bytes[bitstring.bytes.startIndex &+ 1] & 0x80) == 0 {
-                throw ASN1Error.invalidASN1Object(reason: "Invalid padding bit")
+                throw ISO_8824.Error.invalidASN1Object(reason: "Invalid padding bit")
             }
         default:
             // Too many bits!
-            throw ASN1Error.invalidASN1Object(reason: "Too many bits for Key Usage")
+            throw ISO_8824.Error.invalidASN1Object(reason: "Too many bits for Key Usage")
         }
     }
 }
@@ -330,23 +331,16 @@ extension Certificate.Extension {
     ///   - critical: Whether this extension should have the critical bit set.
     @inlinable
     public init(_ keyUsage: KeyUsage, critical: Bool) throws {
-        let asn1Representation = ASN1BitString(keyUsage)
-        var serializer = DER.Serializer()
+        let asn1Representation = ISO_8824.BitString(keyUsage)
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(oid: .X509ExtensionID.keyUsage, critical: critical, value: serializer.serializedBytes[...])
     }
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension KeyUsage: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
-    }
-}
-
 extension UInt16 {
     @inlinable
-    init(_ bitString: ASN1BitString) {
+    init(_ bitString: ISO_8824.BitString) {
         switch bitString.bytes.count {
         case 0:
             self = 0
@@ -361,7 +355,7 @@ extension UInt16 {
     }
 }
 
-extension ASN1BitString {
+extension ISO_8824.BitString {
     @inlinable
     init(_ ext: KeyUsage) {
         if ext.decipherOnly {

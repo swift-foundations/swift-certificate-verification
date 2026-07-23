@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
@@ -53,31 +54,6 @@ extension Certificate {
     ///
     /// Users who add their own extension types (see ``Certificate/Extension`` for more) are encouraged to add their
     /// own helper getters for those types.
-    ///
-    /// ### Builder
-    ///
-    /// Constructing ``Certificate/Extensions-swift.struct`` can be somewhat awkward due to the opaque nature of ``Certificate/Extension``.
-    /// To make this easier, ``Certificate/Extensions-swift.struct`` supports being constructed using a result builder DSL powered by ``ExtensionsBuilder``
-    /// and ``CertificateExtensionConvertible``, using ``init(builder:)``. As an example, we can create a simple set of
-    /// extensions like this:
-    ///
-    /// ```swift
-    /// let extensions = Certificate.Extensions {
-    ///     Critical(
-    ///         KeyUsage(digitalSignature: true, keyCertSign: true, cRLSign: true)
-    ///     )
-    ///
-    ///     ExtendedKeyUsage([.serverAuth, .clientAuth])
-    ///
-    ///     Critical(
-    ///         BasicConstraints.isCertificateAuthority(maxPathLength: 0)
-    ///     )
-    ///
-    ///     AuthorityInformationAccess([.init(method: .ocspServer, location: .uniformResourceIdentifier("http://ocsp.digicert.com"))])
-    /// }
-    /// ```
-    ///
-    /// This interface also makes it easy to mark specific extensions as critical.
     public struct Extensions {
         @usableFromInline
         var _extensions: [Certificate.Extension]
@@ -97,49 +73,15 @@ extension Certificate {
             // This can be used for DoS attacks so we have added this limit.
             let maxExtensions = 32
             guard self._extensions.count <= maxExtensions else {
-                throw ASN1Error.invalidASN1Object(
+                throw ISO_8824.Error.invalidASN1Object(
                     reason:
                         "Too many extensions. Found \(self._extensions.count) but only \(maxExtensions) are allowed."
                 )
             }
 
-            if let (firstIndex, secondIndex) = self._extensions.findDuplicates(by: { $0.oid == $1.oid }) {
-                let firstExt = self._extensions[firstIndex]
-                let secondExt = self._extensions[secondIndex]
-                throw CertificateError.duplicateOID(
-                    reason:
-                        "duplicate extension for OID \(firstExt.oid). First extension \(firstExt) at \(firstIndex) and second extension \(secondExt) at \(secondIndex)"
-                )
+            if let (firstIndex, _) = self._extensions.findDuplicates(by: { $0.oid == $1.oid }) {
+                throw Certificate.Error.extension(.duplicateOID(self._extensions[firstIndex].oid))
             }
-        }
-
-        /// Construct a collection of extensions using the ``ExtensionsBuilder`` syntax.
-        ///
-        /// Constructing ``Certificate/Extensions-swift.struct`` can be somewhat awkward due to the opaque nature of ``Certificate/Extension``.
-        /// To make this easier, ``Certificate/Extensions-swift.struct`` supports being constructed using a result builder DSL powered by ``ExtensionsBuilder``
-        /// and ``CertificateExtensionConvertible``, using ``init(builder:)``. As an example, we can create a simple set of
-        /// extensions like this:
-        ///
-        /// ```swift
-        /// let extensions = Certificate.Extensions {
-        ///     Critical(
-        ///         KeyUsage(digitalSignature: true, keyCertSign: true, cRLSign: true)
-        ///     )
-        ///
-        ///     ExtendedKeyUsage([.serverAuth, .clientAuth])
-        ///
-        ///     Critical(
-        ///         BasicConstraints.isCertificateAuthority(maxPathLength: 0)
-        ///     )
-        ///
-        ///     AuthorityInformationAccess([.init(method: .ocspServer, location: .uniformResourceIdentifier("http://ocsp.digicert.com"))])
-        /// }
-        /// ```
-        ///
-        /// - Parameter builder: The ``ExtensionsBuilder`` DSL.
-        @inlinable
-        public init(@ExtensionsBuilder builder: () throws -> Result<Certificate.Extensions, any Error>) throws {
-            self = try builder().get()
         }
     }
 }
@@ -185,12 +127,9 @@ extension Certificate.Extensions {
     /// - Parameter extension: The ``Certificate/Extension`` to insert.
     /// - Throws: If an ``Certificate/Extension`` with the same ``Certificate/Extension/oid`` is already present
     @inlinable
-    public mutating func append(_ extension: Certificate.Extension) throws {
-        if let oldExtension = self._extensions.first(where: { $0.oid == `extension`.oid }) {
-            throw CertificateError.duplicateOID(
-                reason:
-                    "tried to append an extension for OID \(`extension`.oid) which is already present. Old extension: \(oldExtension) New extension: \(`extension`)"
-            )
+    public mutating func append(_ extension: Certificate.Extension) throws(Certificate.Error) {
+        if self._extensions.contains(where: { $0.oid == `extension`.oid }) {
+            throw Certificate.Error.extension(.duplicateOID(`extension`.oid))
         } else {
             self._extensions.append(`extension`)
         }
@@ -219,7 +158,7 @@ extension Certificate.Extensions {
     ///     or `nil` if an ``Certificate/Extension`` was not present in with the given `oid`.
     @inlinable
     @discardableResult
-    public mutating func remove(_ oid: ASN1ObjectIdentifier) -> Certificate.Extension? {
+    public mutating func remove(_ oid: ISO_8824.ObjectIdentifier) -> Certificate.Extension? {
         guard let index = self._extensions.firstIndex(where: { $0.oid == oid }) else {
             return nil
         }
@@ -252,7 +191,7 @@ extension Certificate.Extensions {
     ///
     /// - Parameter oid: The OID to search for.
     @inlinable
-    public subscript(oid oid: ASN1ObjectIdentifier) -> Certificate.Extension? {
+    public subscript(oid oid: ISO_8824.ObjectIdentifier) -> Certificate.Extension? {
         get {
             self._extensions.first(where: { $0.oid == oid })
         }

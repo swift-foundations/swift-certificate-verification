@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension NameConstraintsPolicy {
@@ -25,7 +26,7 @@ extension NameConstraintsPolicy {
     /// Additionally, RFC 5280 requires that the constraint be equivalent to a subnet defined using CIDR notation.
     /// This implies that we do not tolerate arbitrary masks.
     @inlinable
-    static func ipAddressMatchesConstraint(ipAddress: ASN1OctetString, constraint: ASN1OctetString) -> Bool {
+    static func ipAddressMatchesConstraint(ipAddress: ISO_8824.OctetString, constraint: ISO_8824.OctetString) -> Bool {
         switch (ipAddress.bytes.count, constraint.bytes.count) {
         case (4, 8):
             // IPv4

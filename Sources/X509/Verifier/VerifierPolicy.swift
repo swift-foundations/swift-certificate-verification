@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// A ``VerifierPolicy`` implements a series of checks on an ``UnverifiedCertificateChain`` in order to determine
 /// whether that chain should be trusted.
@@ -42,7 +43,7 @@ public protocol VerifierPolicy: _X509SendableMetatype {
     ///
     /// This may be an empty array, if the policy does not concern itself with any particular extensions. Users must only put
     /// an extension value in this space if they are actually enforcing the rules of that particular extension value.
-    var verifyingCriticalExtensions: [ASN1ObjectIdentifier] { get }
+    var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] { get }
 
     /// Called to determine whether a given ``UnverifiedCertificateChain`` meets the requirements of this policy.
     ///

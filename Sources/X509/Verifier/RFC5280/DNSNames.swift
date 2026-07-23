@@ -13,34 +13,34 @@
 //===----------------------------------------------------------------------===//
 
 @usableFromInline
-let ASCII_PERIOD = UInt8(ascii: ".")
+let ASCII_PERIOD = UInt8(ascii: "." as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_ASTERISK = UInt8(ascii: "*")
+let ASCII_ASTERISK = UInt8(ascii: "*" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_HYPHEN = UInt8(ascii: "-")
+let ASCII_HYPHEN = UInt8(ascii: "-" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_LOWERCASE_A = UInt8(ascii: "a")
+let ASCII_LOWERCASE_A = UInt8(ascii: "a" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_LOWERCASE_Z = UInt8(ascii: "z")
+let ASCII_LOWERCASE_Z = UInt8(ascii: "z" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_UPPERCASE_A = UInt8(ascii: "A")
+let ASCII_UPPERCASE_A = UInt8(ascii: "A" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_UPPERCASE_Z = UInt8(ascii: "Z")
+let ASCII_UPPERCASE_Z = UInt8(ascii: "Z" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_ZERO = UInt8(ascii: "0")
+let ASCII_ZERO = UInt8(ascii: "0" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_NINE = UInt8(ascii: "9")
+let ASCII_NINE = UInt8(ascii: "9" as Unicode.Scalar)
 
 @usableFromInline
-let ASCII_UNDERSCORE = UInt8(ascii: "_")
+let ASCII_UNDERSCORE = UInt8(ascii: "_" as Unicode.Scalar)
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension NameConstraintsPolicy {

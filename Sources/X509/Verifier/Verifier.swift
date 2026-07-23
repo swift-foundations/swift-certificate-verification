@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct Verifier<Policy: VerifierPolicy> {
@@ -311,8 +312,14 @@ struct CandidatePartialChain: Hashable {
 extension Array where Element == Certificate {
     fileprivate mutating func sortBySuitabilityForIssuing(certificate: Certificate) {
         // First, an early exit. If the subject doesn't have an AKI extension, we don't need
-        // to do anything.
-        guard let aki = try? certificate.extensions.authorityKeyIdentifier else {
+        // to do anything. A malformed AKI extension is treated as absent for sorting.
+        let probedAKI: AuthorityKeyIdentifier?
+        do {
+            probedAKI = try certificate.extensions.authorityKeyIdentifier
+        } catch {
+            probedAKI = nil
+        }
+        guard let aki = probedAKI else {
             return
         }
 
@@ -323,7 +330,14 @@ extension Array where Element == Certificate {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
     func issuerPreference(subjectAKI: AuthorityKeyIdentifier) -> Int {
-        guard let ski = try? self.extensions.subjectKeyIdentifier else {
+        // A malformed SKI extension is treated as absent for preference.
+        let probedSKI: SubjectKeyIdentifier?
+        do {
+            probedSKI = try self.extensions.subjectKeyIdentifier
+        } catch {
+            probedSKI = nil
+        }
+        guard let ski = probedSKI else {
             // Medium preference: we have no SKI.
             return 0
         }
@@ -332,7 +346,7 @@ extension Certificate {
         return subjectAKI.keyIdentifier == ski.keyIdentifier ? 1 : -1
     }
 
-    func hasUnhandledCriticalExtensions(handledExtensions: [ASN1ObjectIdentifier]) -> Bool {
+    func hasUnhandledCriticalExtensions(handledExtensions: [ISO_8824.ObjectIdentifier]) -> Bool {
         for ext in self.extensions where ext.critical {
             guard handledExtensions.contains(ext.oid) else {
                 return true

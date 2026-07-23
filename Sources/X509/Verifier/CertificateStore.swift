@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import _CertificateInternals
+import Certificate_Internals
 
 /// A collection of ``Certificate`` objects for use in a verifier.
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
@@ -39,10 +39,6 @@ public struct CertificateStore: Sendable, Hashable {
     @inlinable
     public init(_ certificates: some Sequence<Certificate>) {
         backing = .concrete(.init(certificates))
-    }
-
-    init(systemTrustStore: Bool) {
-        backing = .concrete(.init(systemTrustStore: systemTrustStore))
     }
 
     @inlinable
@@ -82,20 +78,11 @@ extension CertificateStore {
     @usableFromInline
     struct ConcreteBacking: Sendable, Hashable {
         @usableFromInline
-        var systemTrustStore: Bool
-        @usableFromInline
         var additionalTrustRoots: [DistinguishedName: [Certificate]]
 
         @inlinable
         public init(_ certificates: some Sequence<Certificate>) {
-            self.systemTrustStore = false
             self.additionalTrustRoots = Dictionary(grouping: certificates, by: \.subject)
-        }
-
-        @inlinable
-        init(systemTrustStore: Bool) {
-            self.systemTrustStore = systemTrustStore
-            self.additionalTrustRoots = [:]
         }
 
         @inlinable
@@ -161,23 +148,9 @@ extension CertificateStore {
     struct ConcreteResolved: Sendable {
 
         @usableFromInline
-        var systemTrustRoots: [DistinguishedName: [Certificate]]
-
-        @usableFromInline
         var additionalTrustRoots: [DistinguishedName: [Certificate]]
 
         init(_ store: ConcreteBacking, diagnosticsCallback: ((VerificationDiagnostic) -> Void)?) async {
-            if store.systemTrustStore {
-                do {
-                    systemTrustRoots = try await CertificateStore.cachedSystemTrustRootsFuture.value
-                } catch {
-                    diagnosticsCallback?(.loadingTrustRootsFailed(error))
-                    systemTrustRoots = [:]
-                }
-            } else {
-                systemTrustRoots = [:]
-            }
-
             additionalTrustRoots = store.additionalTrustRoots
         }
     }
@@ -188,45 +161,12 @@ extension CertificateStore.ConcreteResolved {
     @inlinable
     subscript(subject: DistinguishedName) -> [Certificate]? {
         get {
-            var matchingCertificates: [Certificate] = []
-
-            if let matchingCertificatesInSystemTrustStore = systemTrustRoots[subject] {
-                matchingCertificates.appendOrReplaceIfEmpty(withContentsOf: matchingCertificatesInSystemTrustStore)
-            }
-
-            if let matchingCertificatesInAdditionTrustRoots = additionalTrustRoots[subject] {
-                matchingCertificates.appendOrReplaceIfEmpty(withContentsOf: matchingCertificatesInAdditionTrustRoots)
-            }
-
-            guard matchingCertificates.isEmpty else {
-                return matchingCertificates
-            }
-            return nil
+            additionalTrustRoots[subject]
         }
     }
 
     @inlinable
     func contains(_ certificate: Certificate) -> Bool {
-        if systemTrustRoots[certificate.subject]?.contains(certificate) == true {
-            return true
-        }
-
-        if additionalTrustRoots[certificate.subject]?.contains(certificate) == true {
-            return true
-        }
-
-        return false
-    }
-}
-
-extension Array {
-    /// non-allocating version of `append(contentsOf:)` if `self` is empty
-    @inlinable
-    mutating func appendOrReplaceIfEmpty(withContentsOf newElements: [Element]) {
-        if self.isEmpty {
-            self = newElements
-        } else {
-            self.append(contentsOf: newElements)
-        }
+        additionalTrustRoots[certificate.subject]?.contains(certificate) == true
     }
 }

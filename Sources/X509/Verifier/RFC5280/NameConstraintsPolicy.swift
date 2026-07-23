@@ -11,19 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// A sub-policy of the ``RFC5280Policy`` that polices the nameConstraints extension.
 @usableFromInline
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 struct NameConstraintsPolicy: VerifierPolicy, Sendable {
     @usableFromInline
-    let verifyingCriticalExtensions: [ASN1ObjectIdentifier] = [
+    let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] = [
         .X509ExtensionID.nameConstraints
     ]
 

@@ -16,7 +16,8 @@ import FoundationEssentials
 #else
 import Foundation
 #endif
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 import Crypto
 
 /// An ECDSA signature is laid out as follows:
@@ -30,9 +31,9 @@ import Crypto
 /// in it without reference to what key created it. We need to be able to store it
 /// abstractly, and then turn it into the signature type we need on request.
 @usableFromInline
-struct ECDSASignature: DERImplicitlyTaggable, Hashable, Sendable {
+struct ECDSASignature: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -49,8 +50,8 @@ struct ECDSASignature: DERImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> ECDSASignature in
             let r = try ArraySlice<UInt8>(derEncoded: &nodes)
             let s = try ArraySlice<UInt8>(derEncoded: &nodes)
 
@@ -59,8 +60,8 @@ struct ECDSASignature: DERImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.r)
             try coder.serialize(self.s)
         }

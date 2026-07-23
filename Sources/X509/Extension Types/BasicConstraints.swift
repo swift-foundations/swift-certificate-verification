@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// Identifies whether the subject of the certificate is a CA and the
 /// maximum verification depth of valid certificate paths that include this
@@ -34,13 +35,13 @@ public enum BasicConstraints {
     ///
     /// - Parameter ext: The ``Certificate/Extension`` to unwrap
     /// - Throws: if the ``Certificate/Extension/oid`` is not equal to
-    ///     `ASN1ObjectIdentifier.X509ExtensionID.basicConstraints`.
+    ///     `ISO_8824.ObjectIdentifier.X509ExtensionID.basicConstraints`.
     @inlinable
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     public init(_ ext: Certificate.Extension) throws {
         guard ext.oid == .X509ExtensionID.basicConstraints else {
-            throw CertificateError.incorrectOIDForExtension(
-                reason: "Expected \(ASN1ObjectIdentifier.X509ExtensionID.basicConstraints), got \(ext.oid)"
+            throw Certificate.Error.extension(
+                .incorrectOID(expected: .X509ExtensionID.basicConstraints, found: ext.oid)
             )
         }
 
@@ -86,24 +87,17 @@ extension Certificate.Extension {
     @inlinable
     public init(_ basicConstraints: BasicConstraints, critical: Bool) throws {
         let asn1Representation = BasicConstraintsValue(basicConstraints)
-        var serializer = DER.Serializer()
+        var serializer = ISO_8825.DER.Serializer()
         try serializer.serialize(asn1Representation)
         self.init(oid: .X509ExtensionID.basicConstraints, critical: critical, value: serializer.serializedBytes[...])
     }
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension BasicConstraints: CertificateExtensionConvertible {
-    public func makeCertificateExtension() throws -> Certificate.Extension {
-        return try .init(self, critical: false)
-    }
-}
-
 // MARK: ASN1 helpers
 @usableFromInline
-struct BasicConstraintsValue: DERImplicitlyTaggable, Sendable {
+struct BasicConstraintsValue: ISO_8825.DER.ImplicitlyTaggable, Sendable {
     @inlinable
-    static var defaultIdentifier: ASN1Identifier {
+    static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -114,13 +108,13 @@ struct BasicConstraintsValue: DERImplicitlyTaggable, Sendable {
     var pathLenConstraint: Int?
 
     @inlinable
-    init(isCA: Bool, pathLenConstraint: Int?) throws {
+    init(isCA: Bool, pathLenConstraint: Int?) throws(ISO_8824.Error) {
         self.isCA = isCA
         self.pathLenConstraint = pathLenConstraint
 
         // CA's must not assert the path len constraint field unless isCA is true.
         guard pathLenConstraint == nil || isCA else {
-            throw ASN1Error.invalidASN1Object(
+            throw ISO_8824.Error.invalidASN1Object(
                 reason:
                     "Invalid combination of isCA (\(isCA)) and path length constraint (\(String(describing: pathLenConstraint))"
             )
@@ -140,17 +134,17 @@ struct BasicConstraintsValue: DERImplicitlyTaggable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let isCA: Bool = try DER.decodeDefault(&nodes, defaultValue: false)
-            let pathLenConstraint: Int? = try DER.optionalImplicitlyTagged(&nodes)
+    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> BasicConstraintsValue in
+            let isCA: Bool = try ISO_8825.DER.decodeDefault(&nodes, defaultValue: false)
+            let pathLenConstraint: Int? = try ISO_8825.DER.optionalImplicitlyTagged(&nodes)
             return try BasicConstraintsValue(isCA: isCA, pathLenConstraint: pathLenConstraint)
         }
     }
 
     @inlinable
-    func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             if self.isCA != false {
                 try coder.serialize(self.isCA)
             }

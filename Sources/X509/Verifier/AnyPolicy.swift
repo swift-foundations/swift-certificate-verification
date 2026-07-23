@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// ``AnyPolicy`` can be used to erase the concrete type of some ``VerifierPolicy``.
 ///  Only use ``AnyPolicy`` if type erasure is necessary.
@@ -45,7 +46,7 @@ public struct AnyPolicy: VerifierPolicy {
     }
 
     @inlinable
-    public var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] {
+    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
         policy.verifyingCriticalExtensions
     }
 
@@ -61,14 +62,14 @@ extension AnyPolicy: Sendable {}
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 struct LegacyPolicySet: VerifierPolicy {
-    let verifyingCriticalExtensions: [ASN1ObjectIdentifier]
+    let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier]
 
     var policies: [any VerifierPolicy]
 
     init(policies: [any VerifierPolicy]) {
         self.policies = policies
 
-        var extensions: [ASN1ObjectIdentifier] = []
+        var extensions: [ISO_8824.ObjectIdentifier] = []
         extensions.reserveCapacity(policies.reduce(into: 0, { $0 += $1.verifyingCriticalExtensions.count }))
 
         for policy in policies {

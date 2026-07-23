@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
@@ -39,8 +40,8 @@ extension Certificate {
     public struct Extension {
         /// The identifier for this extension type.
         ///
-        /// Common values are stored in `ASN1ObjectIdentifier.X509ExtensionID`.
-        public var oid: ASN1ObjectIdentifier
+        /// Common values are stored in `ISO_8824.ObjectIdentifier.X509ExtensionID`.
+        public var oid: ISO_8824.ObjectIdentifier
 
         /// Whether this extension must be processed in order to trust the certificate.
         ///
@@ -60,7 +61,7 @@ extension Certificate {
         ///   - critical: Whether this extension must be processed in order to trust the certificate.
         ///   - value: The encoded bytes of the value of this extension.
         @inlinable
-        public init(oid: ASN1ObjectIdentifier, critical: Bool, value: ArraySlice<UInt8>) {
+        public init(oid: ISO_8824.ObjectIdentifier, critical: Bool, value: ArraySlice<UInt8>) {
             self.oid = oid
             self.critical = critical
             self.value = value
@@ -77,69 +78,54 @@ extension Certificate.Extension: Sendable {}
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate.Extension: CustomStringConvertible {
     public var description: String {
-        if let knownExtension = try? AuthorityInformationAccess(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? SubjectKeyIdentifier(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? AuthorityKeyIdentifier(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? ExtendedKeyUsage(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? BasicConstraints(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? KeyUsage(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? NameConstraints(self) {
-            return String(reflecting: knownExtension)
-        } else if let knownExtension = try? SubjectAlternativeNames(self) {
-            return String(reflecting: knownExtension)
-        } else {
-            return """
-                Extension(\
-                oid: \(String(reflecting: self.oid)), \
-                critical: \(String(reflecting: self.critical)), \
-                value: \(self.value.count) bytes\
-                )
-                """
-        }
+        // Probes: an extension that does not decode as a known type falls through
+        // to the opaque rendering; decode failure is not an error here.
+        do { return String(reflecting: try AuthorityInformationAccess(self)) } catch {}
+        do { return String(reflecting: try SubjectKeyIdentifier(self)) } catch {}
+        do { return String(reflecting: try AuthorityKeyIdentifier(self)) } catch {}
+        do { return String(reflecting: try ExtendedKeyUsage(self)) } catch {}
+        do { return String(reflecting: try BasicConstraints(self)) } catch {}
+        do { return String(reflecting: try KeyUsage(self)) } catch {}
+        do { return String(reflecting: try NameConstraints(self)) } catch {}
+        do { return String(reflecting: try SubjectAlternativeNames(self)) } catch {}
+        return """
+            Extension(\
+            oid: \(String(reflecting: self.oid)), \
+            critical: \(String(reflecting: self.critical)), \
+            value: \(self.value.count) bytes\
+            )
+            """
     }
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate.Extension: DERImplicitlyTaggable {
+extension Certificate.Extension: ISO_8825.DER.ImplicitlyTaggable {
     @inlinable
-    public static var defaultIdentifier: ASN1Identifier {
+    public static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
     @inlinable
-    public init(derEncoded rootNode: ASN1Node, withIdentifier identifier: ASN1Identifier) throws {
-        self = try DER.sequence(rootNode, identifier: identifier) { nodes in
-            let extensionID = try ASN1ObjectIdentifier(derEncoded: &nodes)
-            let critical = try DER.decodeDefault(&nodes, defaultValue: false)
-            let value = try ASN1OctetString(derEncoded: &nodes)
+    public init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> Certificate.Extension in
+            let extensionID = try ISO_8824.ObjectIdentifier(derEncoded: &nodes)
+            let critical = try ISO_8825.DER.decodeDefault(&nodes, defaultValue: false)
+            let value = try ISO_8824.OctetString(derEncoded: &nodes)
 
             return Certificate.Extension(oid: extensionID, critical: critical, value: value.bytes)
         }
     }
 
     @inlinable
-    public func serialize(into coder: inout DER.Serializer, withIdentifier identifier: ASN1Identifier) throws {
-        try coder.appendConstructedNode(identifier: identifier) { coder in
+    public func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+        try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.oid)
 
             if self.critical {
                 try coder.serialize(self.critical)
             }
 
-            try coder.serialize(ASN1OctetString(contentBytes: self.value))
+            try coder.serialize(ISO_8824.OctetString(contentBytes: self.value))
         }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Certificate.Extension: CertificateExtensionConvertible {
-    public func makeCertificateExtension() -> Certificate.Extension {
-        self
     }
 }

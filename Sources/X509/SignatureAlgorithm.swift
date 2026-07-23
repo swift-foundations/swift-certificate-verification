@@ -133,7 +133,7 @@ extension AlgorithmIdentifier {
     }
 
     @inlinable
-    init(digestAlgorithmFor signatureAlgorithm: Certificate.SignatureAlgorithm) throws {
+    init(digestAlgorithmFor signatureAlgorithm: Certificate.SignatureAlgorithm) throws(Certificate.Error) {
         // Per RFC 5754 § 2, we must produce digest algorithm identifiers with
         // absent parameters, so we do.
         switch signatureAlgorithm {
@@ -146,8 +146,8 @@ extension AlgorithmIdentifier {
         case .sha1WithRSAEncryption:
             self = .sha1
         default:
-            throw CertificateError.unsupportedSignatureAlgorithm(
-                reason: "Cannot generate digest algorithm for \(signatureAlgorithm)"
+            throw Certificate.Error.algorithm(
+                .unsupportedSignature(AlgorithmIdentifier(signatureAlgorithm).algorithm)
             )
         }
     }
@@ -157,7 +157,7 @@ extension AlgorithmIdentifier {
 extension Certificate.SignatureAlgorithm {
     /// Map a signature algorithm to the signature scheme value defined in RFC 8446 for TLS 1.3.
     public var rfc8446SignatureSchemeValue: UInt16 {
-        get throws {
+        get throws(Certificate.Error) {
             switch self {
             case .ecdsaWithSHA256:
                 return 0x0403
@@ -176,8 +176,8 @@ extension Certificate.SignatureAlgorithm {
             case .ed25519:
                 return 0x0807
             default:
-                throw CertificateError.unsupportedSignatureAlgorithm(
-                    reason: "SignatureAlgorithm(\(self)) has an unsupprted value"
+                throw Certificate.Error.algorithm(
+                    .unsupportedSignature(AlgorithmIdentifier(self).algorithm)
                 )
             }
         }

@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftASN1
+import ISO_8824
+import ISO_8825
 
 /// A sub-policy of the ``RFC5280Policy`` that polices that version 1 certificates do not contain extensions.
 @usableFromInline
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 struct VersionPolicy: VerifierPolicy, Sendable {
     @inlinable
-    var verifyingCriticalExtensions: [SwiftASN1.ASN1ObjectIdentifier] { [] }
+    var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] { [] }
 
     @inlinable
     init() {}
