@@ -117,7 +117,7 @@ extension GeneralName: CustomStringConvertible {
         case .directoryName(let directoryName):
             return "DirectoryName(\(String(reflecting: directoryName)))"
         case .ediPartyName(let name):
-            return "EDIPartyName(\(String(reflecting: name)))"
+            return "EDIPartyName(\(String(reflecting: name.derBytes)))"
         case .ipAddress(let address):
             return "IPAddress(\(String(reflecting: Array(address.bytes))))"
         case .otherName(let otherName):
@@ -129,8 +129,37 @@ extension GeneralName: CustomStringConvertible {
         case .uniformResourceIdentifier(let uri):
             return "URI(\(String(reflecting: uri)))"
         case .x400Address(let address):
-            return "X400Address(\(String(reflecting: address)))"
+            return "X400Address(\(String(reflecting: address.derBytes)))"
         }
+    }
+}
+
+extension ISO_8825.`Any` {
+    /// The DER bytes this ANY wraps, recovered by re-serializing it.
+    ///
+    /// Every other case of ``GeneralName``'s description renders a spec-mirroring RFC 5280
+    /// §4.2.1.6 CHOICE label over its payload; `ediPartyName` and `x400Address` used to
+    /// render `String(reflecting:)` of the ANY itself, which leaks a *Swift* type name into
+    /// a description whose job is to show the *specification* shape. Rendering the bytes
+    /// bare matches `ipAddress`, three cases above, which is the same situation: an opaque
+    /// octet payload inside a spec-named case.
+    ///
+    /// It has to be recovered by serializing rather than read directly, because
+    /// ``ISO_8825/Any`` deliberately exposes no byte accessor — its documented contract is
+    /// that a caller may decode it, create it, or serialize it, and nothing else. That is
+    /// why the `ipAddress` precedent could not simply be copied: `ISO_8824.OctetString`
+    /// publishes `bytes`, and this type does not. Serializing is the sanctioned route, and
+    /// is exactly what ``GeneralName/serialize(into:withIdentifier:)`` already does for
+    /// these two cases.
+    @usableFromInline
+    var derBytes: [UInt8] {
+        var serializer = ISO_8825.DER.Serializer()
+        // `Any.serialize` writes its stored bytes verbatim and has no failure path; the
+        // `throws` belongs to the protocol requirement, not to this type. A description
+        // must not trap or propagate, so an empty rendering is the fail-quiet answer for a
+        // branch that cannot be reached.
+        guard (try? self.serialize(into: &serializer)) != nil else { return [] }
+        return Array(serializer.serializedBytes)
     }
 }
 

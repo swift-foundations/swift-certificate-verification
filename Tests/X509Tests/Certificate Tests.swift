@@ -92,7 +92,7 @@ extension Certificate.Test.Unit {
         )
         #expect(
             try String(describing: GeneralName.ediPartyName(ISO_8825.`Any`(erasing: ISO_8824.Null())))
-                == "EDIPartyName(ASN1Any([5, 0]))"
+                == "EDIPartyName([5, 0])"
         )
         #expect(
             String(describing: GeneralName.ipAddress(ISO_8824.OctetString(contentBytes: [127, 0, 0, 1])))
@@ -108,7 +108,7 @@ extension Certificate.Test.Unit {
         )
         #expect(
             try String(describing: GeneralName.x400Address(ISO_8825.`Any`(erasing: ISO_8824.Null())))
-                == "X400Address(ASN1Any([5, 0]))"
+                == "X400Address([5, 0])"
         )
         #expect(
             String(describing: GeneralName.uniformResourceIdentifier("http://www.apple.com/"))
