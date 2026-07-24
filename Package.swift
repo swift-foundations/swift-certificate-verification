@@ -82,10 +82,6 @@ let package = Package(
                 "RFC5280Policy Tests.swift",
                 "ServerIdentityPolicy Tests.swift",
                 "Verifier Tests.swift",
-                // Also deferred: depend on the excluded DistinguishedNameBuilder DSL
-                // (CountryName/OrganizationName/…) — increment 2.
-                "DistinguishedName Tests.swift",
-                "NameConstraints Tests.swift",
             ],
             resources: [.copy("Fixtures")]
         ),

@@ -249,14 +249,14 @@ extension DistinguishedName.Test.Unit {
 
         expectEqualValueAndHash(
             try RelativeDistinguishedName.Attribute.Value(
-                asn1Any: ISO_8825.`Any`(erasing: ASN1UTF8String("This is a fancy UTF8 String with Emojies 🥳🐥"))
+                asn1Any: ISO_8825.`Any`(erasing: ISO_8824.UTF8String("This is a fancy UTF8 String with Emojies 🥳🐥"))
             ),
             RelativeDistinguishedName.Attribute.Value(utf8String: "This is a fancy UTF8 String with Emojies 🥳🐥")
         )
 
         expectEqualValueAndHash(
             try RelativeDistinguishedName.Attribute.Value(
-                asn1Any: ISO_8825.`Any`(erasing: ASN1PrintableString("This is a simple printable string 123456789 ():="))
+                asn1Any: ISO_8825.`Any`(erasing: ISO_8824.PrintableString("This is a simple printable string 123456789 ():="))
             ),
             try RelativeDistinguishedName.Attribute.Value(
                 printableString: "This is a simple printable string 123456789 ():="
@@ -265,14 +265,14 @@ extension DistinguishedName.Test.Unit {
 
         expectEqualValueAndHash(
             try RelativeDistinguishedName.Attribute.Value(
-                asn1Any: ISO_8825.`Any`(erasing: ASN1UTF8String(String(repeating: "A", count: 129)))
+                asn1Any: ISO_8825.`Any`(erasing: ISO_8824.UTF8String(String(repeating: "A", count: 129)))
             ),
             RelativeDistinguishedName.Attribute.Value(utf8String: String(repeating: "A", count: 129))
         )
 
         expectEqualValueAndHash(
             try RelativeDistinguishedName.Attribute.Value(
-                asn1Any: ISO_8825.`Any`(erasing: ASN1UTF8String(String(repeating: "A", count: Int(UInt16.max) + 1)))
+                asn1Any: ISO_8825.`Any`(erasing: ISO_8824.UTF8String(String(repeating: "A", count: Int(UInt16.max) + 1)))
             ),
             RelativeDistinguishedName.Attribute.Value(utf8String: String(repeating: "A", count: Int(UInt16.max) + 1))
         )
@@ -312,12 +312,12 @@ extension DistinguishedName.Test.`Edge Case` {
             (.init(type: .RDNAttributeType.commonName, printableString: "foo"), "foo"),
             (.init(type: .RDNAttributeType.commonName, utf8String: "bar"), "bar"),
             (.init(type: .RDNAttributeType.commonName, ia5String: "foo"), "foo"),
-            /// ASN1IA5String with wrong tag
+            /// ISO_8824.IA5String with wrong tag
             (
                 .init(type: .RDNAttributeType.commonName, value: ISO_8825.`Any`(derEncoded: [0x19, 0x03, 0x41, 0x42, 0x43])),
                 nil
             ),
-            /// ASN1IA5String byte that falls outside the range of 7-bit ASCII
+            /// ISO_8824.IA5String byte that falls outside the range of 7-bit ASCII
             (
                 .init(type: .RDNAttributeType.commonName, value: ISO_8825.`Any`(derEncoded: [0x16, 0x03, 0x41, 0x42, 0x80])),
                 nil
@@ -335,9 +335,9 @@ extension DistinguishedName.Test.`Edge Case` {
         let examplesAndResults: [(RelativeDistinguishedName.Attribute, String?)] = try [
             (.init(type: weirdOID, printableString: "foo"), "foo"),
             (.init(type: weirdOID, utf8String: "bar"), "bar"),
-            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ASN1UTF8String("foo"))), "foo"),
-            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ASN1PrintableString("baz"))), "baz"),
-            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ASN1IA5String("foo"))), "foo"),
+            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ISO_8824.UTF8String("foo"))), "foo"),
+            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ISO_8824.PrintableString("baz"))), "baz"),
+            (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ISO_8824.IA5String("foo"))), "foo"),
             (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: 5)), nil),
             (.init(type: weirdOID, value: ISO_8825.`Any`(erasing: ISO_8824.OctetString(contentBytes: [1, 2, 3, 4]))), nil),
         ]
@@ -349,7 +349,7 @@ extension DistinguishedName.Test.`Edge Case` {
 
     @Test func `rdn attribute values can be parsed when printable string is invalid`() throws {
         // '&' is not allowed in PrintableString.
-        let value = try ISO_8825.`Any`(erasing: ASN1UTF8String("Wells Fargo & Company"), withIdentifier: .printableString)
+        let value = try ISO_8825.`Any`(erasing: ISO_8824.UTF8String("Wells Fargo & Company"), withIdentifier: .printableString)
 
         let attribute = try RelativeDistinguishedName.Attribute(derEncoded: [
             0x30, 0x1c, 0x06, 0x03, 0x55, 0x04, 0x0a, 0x13, 0x15, 0x57, 0x65, 0x6c, 0x6c, 0x73, 0x20,
@@ -424,85 +424,8 @@ extension DistinguishedName.Test.Integration {
         #expect(serializer.serializedBytes == expectedBytes)
     }
 
-    @Test func `distinguished name builder`() throws {
-        let name = try DistinguishedName {
-            CountryName("US")
-            OrganizationName("DigiCert Inc")
-            OrganizationalUnitName("www.digicert.com")
-            CommonName("DigiCert Global Root G3")
-            EmailAddress("jon.doe@apple.com")
-            DomainComponent("apple")
-            DomainComponent("com")
-        }
-        #expect(
-            name
-                == (try DistinguishedName([
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.countryName, printableString: "US"),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.organizationName,
-                        utf8String: "DigiCert Inc"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.organizationalUnitName,
-                        utf8String: "www.digicert.com"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.commonName,
-                        utf8String: "DigiCert Global Root G3"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.emailAddress,
-                        ia5String: "jon.doe@apple.com"
-                    ),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.domainComponent, ia5String: "apple"),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.domainComponent, ia5String: "com"),
-                ]))
-        )
-    }
-
-    @Test func `distinguished name builder flow`() throws {
-        let x = 1
-        let name = try DistinguishedName {
-            CountryName("US")
-            OrganizationName("DigiCert Inc")
-
-            if x == 1 {
-                OrganizationalUnitName("www.digicert.com")
-            }
-
-            if x == 2 {
-                StreetAddress("123 Fake Street")
-            } else {
-                StreetAddress("123 Real Street")
-            }
-
-            if x == 3 {
-                StateOrProvinceName("DigiLand")
-            }
-
-            for name in ["foo", "bar", "baz"].filter({ $0 == "baz" }) {
-                CommonName(name)
-            }
-        }
-
-        #expect(
-            name
-                == (try DistinguishedName([
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.countryName, printableString: "US"),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.organizationName,
-                        utf8String: "DigiCert Inc"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.organizationalUnitName,
-                        utf8String: "www.digicert.com"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.streetAddress,
-                        utf8String: "123 Real Street"
-                    ),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.commonName, utf8String: "baz"),
-                ]))
-        )
-    }
+    // `distinguished name builder` and `distinguished name builder flow` were
+    // deferred here: they test the DistinguishedNameBuilder result-builder DSL,
+    // which is an excluded (issuance-side) surface in slice 1. See the
+    // deferred-tests ledger. The 17 remaining cases are DN/RDN essence.
 }

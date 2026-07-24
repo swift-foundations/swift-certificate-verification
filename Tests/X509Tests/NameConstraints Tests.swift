@@ -20,23 +20,43 @@ import ISO_8825
 extension NameConstraints {
     @Suite struct Test {
         @Suite struct Unit {
+            // Built via the array-form initializer rather than the
+            // DistinguishedNameBuilder DSL (an excluded issuance-side surface in
+            // slice 1). Attribute encodings match the DSL's: countryName as
+            // PrintableString, the rest as UTF8String — so the names, and
+            // therefore the equality semantics under test, are unchanged.
             static let names: [DistinguishedName] = [
-                try! DistinguishedName {
-                    CountryName("US")
-                    StateOrProvinceName("CA")
-                    OrganizationName("Apple")
-                },
-                try! DistinguishedName {
-                    CountryName("US")
-                    StateOrProvinceName("CA")
-                    OrganizationName("Apple")
-                    CommonName("Test")
-                },
-                try! DistinguishedName {
-                    CountryName("GB")
-                    OrganizationName("Apple")
-                    CommonName("Test")
-                },
+                try! DistinguishedName([
+                    RelativeDistinguishedName.Attribute(
+                        type: .RDNAttributeType.countryName,
+                        printableString: "US"
+                    ),
+                    RelativeDistinguishedName.Attribute(
+                        type: .RDNAttributeType.stateOrProvinceName,
+                        utf8String: "CA"
+                    ),
+                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+                ]),
+                try! DistinguishedName([
+                    RelativeDistinguishedName.Attribute(
+                        type: .RDNAttributeType.countryName,
+                        printableString: "US"
+                    ),
+                    RelativeDistinguishedName.Attribute(
+                        type: .RDNAttributeType.stateOrProvinceName,
+                        utf8String: "CA"
+                    ),
+                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.commonName, utf8String: "Test"),
+                ]),
+                try! DistinguishedName([
+                    RelativeDistinguishedName.Attribute(
+                        type: .RDNAttributeType.countryName,
+                        printableString: "GB"
+                    ),
+                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.commonName, utf8String: "Test"),
+                ]),
             ]
 
             @Test func `directory name matches`() throws {

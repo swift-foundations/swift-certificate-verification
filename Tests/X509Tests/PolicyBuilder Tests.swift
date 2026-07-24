@@ -41,28 +41,12 @@ extension PolicyBuilder {
 }
 
 extension PolicyBuilder {
-    fileprivate static let privateKey = P384.Signing.PrivateKey()
-
-    fileprivate static let certificate = try! Certificate(
-        version: .v3,
-        serialNumber: .init(),
-        publicKey: .init(privateKey.publicKey),
-        notValidBefore: Date() - .days(356),
-        notValidAfter: Date() + .days(356),
-        issuer: try! DistinguishedName {
-            CountryName("US")
-            OrganizationName("Apple")
-            CommonName("Swift Certificate Test CA 1")
-        },
-        subject: try! DistinguishedName {
-            CountryName("US")
-            OrganizationName("Apple")
-            CommonName("Swift Certificate Test CA 1")
-        },
-        signatureAlgorithm: .ecdsaWithSHA384,
-        extensions: .init(),
-        issuerPrivateKey: .init(privateKey)
-    )
+    // These suites exercise policy COMPOSITION (the PolicyBuilder DSL and the
+    // meets/fails-to-meet plumbing); the policies under test never inspect the
+    // certificate, so it is only a vehicle for building a chain. Bound to a frozen
+    // DER fixture rather than issued in-test — issuance is an excluded surface in
+    // slice 1, and this preserves every assertion in the file unchanged.
+    fileprivate static let certificate = try! Fixture.certificate("root-ca")
 
     fileprivate static let chain = UnverifiedCertificateChain([
         certificate
