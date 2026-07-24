@@ -75,6 +75,55 @@ extension Certificate.Verify.Test.Unit {
             )
         )
     }
+
+    /// `ECDSASignature` stores `r`/`s` in ASN.1 integer form, with leading zero bytes
+    /// stripped; the witness re-pads each back to the curve's coordinate width before
+    /// handing them to the backend. **Those two halves must compose to the identity** —
+    /// strip-then-pad has to return exactly the bytes signing produced, or the witness
+    /// rejects signatures that are perfectly valid.
+    ///
+    /// Nothing else covers the composition. The witness cases above verify real frozen
+    /// certificates, but a coordinate only carries a leading zero byte about once in 256,
+    /// so a fixed corpus is overwhelmingly likely to miss the boundary entirely — a
+    /// padding defect would sit behind a green suite until it met a certificate in the
+    /// wild. These vectors hit the boundaries deliberately rather than hoping for them.
+    @Test func `stripping and re-padding an ECDSA signature is the identity`() throws {
+        // P-256 field element width: SEC 1 v2.0 §2.3.3, the same constant the witness uses.
+        let width = 32
+
+        func roundTrips(_ raw: [UInt8]) -> Bool {
+            let signature = ECDSASignature(rawSignatureBytes: raw)
+            return signature.paddedRawRepresentation(coordinateByteCount: width) == raw
+        }
+
+        // No leading zeros in either coordinate — the ordinary case.
+        #expect(roundTrips(Array(repeating: 0x7F, count: 2 * width)))
+
+        // Top bit set throughout: the shape that makes a DER INTEGER carry a sign byte.
+        #expect(roundTrips(Array(repeating: 0xFF, count: 2 * width)))
+
+        // A leading zero in r only, in s only, and in both.
+        var rLeadingZero = Array(repeating: UInt8(0x11), count: 2 * width)
+        rLeadingZero[0] = 0x00
+        var sLeadingZero = Array(repeating: UInt8(0x11), count: 2 * width)
+        sLeadingZero[width] = 0x00
+        var bothLeadingZero = Array(repeating: UInt8(0x11), count: 2 * width)
+        bothLeadingZero[0] = 0x00
+        bothLeadingZero[width] = 0x00
+        #expect(roundTrips(rLeadingZero))
+        #expect(roundTrips(sLeadingZero))
+        #expect(roundTrips(bothLeadingZero))
+
+        // Degenerate: an all-zero coordinate strips to nothing and must pad back to full
+        // width. This is the case where an off-by-one in the padding is most visible.
+        #expect(roundTrips(Array(repeating: 0x00, count: 2 * width)))
+
+        // Genuinely small integers — 31 leading zeros in each coordinate.
+        var small = Array(repeating: UInt8(0x00), count: 2 * width)
+        small[width - 1] = 0x09
+        small[2 * width - 1] = 0x07
+        #expect(roundTrips(small))
+    }
 }
 
 extension Certificate.Verify.Test.`Edge Case` {

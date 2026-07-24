@@ -222,7 +222,7 @@ extension Certificate.Signature.Test.`Edge Case` {
     func `ecdsa signature correctly strips leading zeros from raw byte representation`() throws {
         // We're testing a round-trip logic here, ensuring that the ECDSA signature correctly round-trips.
         func testECDSASignatureRoundTrip(rawSignatureBytes: [UInt8]) throws {
-            let sig = ECDSASignature(rawSignatureBytes: Data(rawSignatureBytes))
+            let sig = ECDSASignature(rawSignatureBytes: rawSignatureBytes)
 
             var serializer = ISO_8825.DER.Serializer()
             try serializer.serialize(sig)
