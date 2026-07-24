@@ -14,20 +14,17 @@
 
 import ISO_8824
 import ISO_8825
-@preconcurrency import Crypto
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
     /// A public key that can be used with a certificate.
     ///
-    /// This type provides an opaque wrapper around the various public key types
-    /// provided by `swift-crypto`. Users are expected to construct this key from
-    /// one of those types, or to decode it from the network.
+    /// This type is a *model* of a public key: an algorithm plus the key's canonical
+    /// bytes. It performs no cryptography and wraps no cryptographic key object, so
+    /// this module needs no cryptographic backend to parse, hold, compare, or
+    /// re-serialize a certificate's key. Cryptographic use of the key happens through
+    /// the injected ``Certificate/Verify`` witness, which reconstructs whatever key
+    /// type its backend requires from ``subjectPublicKeyInfoBytes``.
     public struct PublicKey {
         @usableFromInline
         var backing: BackingPublicKey
@@ -36,17 +33,25 @@ extension Certificate {
         internal init(spki: SubjectPublicKeyInfo) throws {
             switch spki.algorithmIdentifier {
             case .p256PublicKey:
-                let key = try P256.Signing.PublicKey(x963Representation: spki.key.bytes)
-                self.backing = .p256(key)
+                guard spki.key.bytes.count == Certificate.PublicKey.p256X963ByteCount else {
+                    throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
+                }
+                self.backing = .p256(x963: Array(spki.key.bytes))
             case .p384PublicKey:
-                let key = try P384.Signing.PublicKey(x963Representation: spki.key.bytes)
-                self.backing = .p384(key)
+                guard spki.key.bytes.count == Certificate.PublicKey.p384X963ByteCount else {
+                    throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
+                }
+                self.backing = .p384(x963: Array(spki.key.bytes))
             case .p521PublicKey:
-                let key = try P521.Signing.PublicKey(x963Representation: spki.key.bytes)
-                self.backing = .p521(key)
+                guard spki.key.bytes.count == Certificate.PublicKey.p521X963ByteCount else {
+                    throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
+                }
+                self.backing = .p521(x963: Array(spki.key.bytes))
             case .ed25519:
-                let key = try Curve25519.Signing.PublicKey(rawRepresentation: spki.key.bytes)
-                self.backing = .ed25519(key)
+                guard spki.key.bytes.count == Certificate.PublicKey.ed25519RawByteCount else {
+                    throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
+                }
+                self.backing = .ed25519(raw: Array(spki.key.bytes))
             default:
                 throw Certificate.Error.algorithm(.unsupportedPublicKey(spki.algorithmIdentifier.algorithm))
             }
@@ -56,104 +61,56 @@ extension Certificate {
         internal init(backing: BackingPublicKey) {
             self.backing = backing
         }
-
-        /// Construct a public key wrapping a P256 public key.
-        /// - Parameter p256: The P256 public key to wrap.
-        @inlinable
-        public init(_ p256: P256.Signing.PublicKey) {
-            self.backing = .p256(p256)
-        }
-
-        /// Construct a public key wrapping a P384 public key.
-        /// - Parameter p384: The P384 public key to wrap.
-        @inlinable
-        public init(_ p384: P384.Signing.PublicKey) {
-            self.backing = .p384(p384)
-        }
-
-        /// Construct a public key wrapping a P521 public key.
-        /// - Parameter p521: The P521 public key to wrap.
-        @inlinable
-        public init(_ p521: P521.Signing.PublicKey) {
-            self.backing = .p521(p521)
-        }
-
-        /// Construct a public key wrapping an Ed25519 public key.
-        /// - Parameter ed25519: The Ed25519 public key to wrap.
-        @inlinable
-        public init(_ ed25519: Curve25519.Signing.PublicKey) {
-            self.backing = .ed25519(ed25519)
-        }
     }
 }
 
+// MARK: Key-length validation
+
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate.PublicKey {
-    /// Confirms that `signature` is a valid signature for `certificate`, created by the
-    /// private key associated with this public key.
-    ///
-    /// This function abstracts over the need to unwrap both the signature and public key to
-    /// confirm they're of matching type before we validate the signature.
-    ///
-    /// - Parameters:
-    ///   - signature: The signature to validate against `certificate`.
-    ///   - certificate: The `certificate` to validate against `signature`.
-    /// - Returns: Whether the signature was produced by signing `certificate` with the private key corresponding to this public key.
-    @inlinable
-    public func isValidSignature(_ signature: Certificate.Signature, for certificate: Certificate) -> Bool {
-        return self.isValidSignature(
-            signature,
-            for: certificate.tbsCertificateBytes,
-            signatureAlgorithm: certificate.signatureAlgorithm
-        )
-    }
+    // Why lengths are checked here at all:
+    //
+    // Before this type became algorithm-plus-bytes, constructing a backend key object
+    // validated the encoding implicitly, and a malformed key was rejected at parse. The
+    // model must not silently lose that. A byte count is arithmetic on an encoding, not
+    // cryptography, so re-asserting it costs this module no cryptographic dependency —
+    // and it keeps parsing fail-closed, so a malformed key is rejected where the
+    // algorithm identifier that gives it meaning is still in hand, rather than travelling
+    // deeper and failing later where the failure is far harder to attribute.
+    //
+    // These are the sizes fixed by the specifications, not tuning parameters. Each is
+    // recorded with its source so that a later reader cannot mistake it for a magic
+    // number and "simplify" it.
 
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: Certificate.Signature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch self.backing {
-        case .p256(let p256):
-            return p256.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .p384(let p384):
-            return p384.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .p521(let p521):
-            return p521.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .ed25519(let ed25519):
-            return ed25519.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        }
-    }
+    /// Length of an uncompressed X9.63 P-256 point: the `0x04` uncompressed-form tag
+    /// followed by the 32-byte `x` and 32-byte `y` coordinates.
+    ///
+    /// Source: SEC 1 v2.0 §2.3.3 (Elliptic-Curve-Point-to-Octet-String Conversion),
+    /// uncompressed form, with a 32-byte field element for the P-256 curve.
+    @usableFromInline
+    static let p256X963ByteCount = 1 + 32 + 32  // 65
 
-    /// Confirms that `signature` is a valid signature for `bytes`, created by the
-    /// private key associated with this public key.
+    /// Length of an uncompressed X9.63 P-384 point: the `0x04` uncompressed-form tag
+    /// followed by the 48-byte `x` and 48-byte `y` coordinates.
     ///
-    /// This function accepts raw signature bytes (such as those from a TLS handshake)
-    /// and validates them directly against the data.
+    /// Source: SEC 1 v2.0 §2.3.3, uncompressed form, 48-byte field element (P-384).
+    @usableFromInline
+    static let p384X963ByteCount = 1 + 48 + 48  // 97
+
+    /// Length of an uncompressed X9.63 P-521 point: the `0x04` uncompressed-form tag
+    /// followed by the 66-byte `x` and 66-byte `y` coordinates.
     ///
-    /// - Parameters:
-    ///   - signature: The raw signature bytes to validate.
-    ///   - bytes: The data that was signed.
-    ///   - signatureAlgorithm: The algorithm used to create the signature.
-    /// - Returns: Whether the signature was produced by signing `bytes` with the private key corresponding to this public key.
-    @inlinable
-    public func isValidSignature<SignatureBytes: DataProtocol, Bytes: DataProtocol>(
-        _ signature: SignatureBytes,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch self.backing {
-        case .p256(let p256):
-            return p256.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .p384(let p384):
-            return p384.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .p521(let p521):
-            return p521.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        case .ed25519(let ed25519):
-            return ed25519.isValidSignature(signature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-        }
-    }
+    /// Source: SEC 1 v2.0 §2.3.3, uncompressed form, 66-byte field element (P-521 —
+    /// 521 bits rounded up to whole octets).
+    @usableFromInline
+    static let p521X963ByteCount = 1 + 66 + 66  // 133
+
+    /// Length of an Ed25519 raw public key.
+    ///
+    /// Source: RFC 8032 §5.1.5 (Ed25519 Key Generation) — the public key is the
+    /// 32-octet encoding of the point `A`.
+    @usableFromInline
+    static let ed25519RawByteCount = 32
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
@@ -180,46 +137,19 @@ extension Certificate.PublicKey: CustomStringConvertible {
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate.PublicKey {
+    /// The algorithm of the key, paired with the key's canonical bytes.
+    ///
+    /// The payload is the same encoding the certificate carried: the X9.63 uncompressed
+    /// point for the NIST curves, and the raw 32-byte point for Ed25519. Holding bytes
+    /// rather than a backend key object is what keeps this module free of a
+    /// cryptographic dependency; `Hashable` and `Sendable` are then synthesized, because
+    /// two keys are equal exactly when their algorithm and bytes are.
     @usableFromInline
     enum BackingPublicKey: Hashable, Sendable {
-        case p256(Crypto.P256.Signing.PublicKey)
-        case p384(Crypto.P384.Signing.PublicKey)
-        case p521(Crypto.P521.Signing.PublicKey)
-        case ed25519(Curve25519.Signing.PublicKey)
-
-        @inlinable
-        static func == (lhs: BackingPublicKey, rhs: BackingPublicKey) -> Bool {
-            switch (lhs, rhs) {
-            case (.p256(let l), .p256(let r)):
-                return l.rawRepresentation == r.rawRepresentation
-            case (.p384(let l), .p384(let r)):
-                return l.rawRepresentation == r.rawRepresentation
-            case (.p521(let l), .p521(let r)):
-                return l.rawRepresentation == r.rawRepresentation
-            case (.ed25519(let l), .ed25519(let r)):
-                return l.rawRepresentation == r.rawRepresentation
-            default:
-                return false
-            }
-        }
-
-        @inlinable
-        func hash(into hasher: inout Hasher) {
-            switch self {
-            case .p256(let digest):
-                hasher.combine(0)
-                hasher.combine(digest.rawRepresentation)
-            case .p384(let digest):
-                hasher.combine(1)
-                hasher.combine(digest.rawRepresentation)
-            case .p521(let digest):
-                hasher.combine(2)
-                hasher.combine(digest.rawRepresentation)
-            case .ed25519(let digest):
-                hasher.combine(4)
-                hasher.combine(digest.rawRepresentation)
-            }
-        }
+        case p256(x963: [UInt8])
+        case p384(x963: [UInt8])
+        case p521(x963: [UInt8])
+        case ed25519(raw: [UInt8])
     }
 }
 
@@ -231,18 +161,18 @@ extension SubjectPublicKeyInfo {
         let key: ISO_8824.BitString
 
         switch publicKey.backing {
-        case .p256(let p256):
+        case .p256(let bytes):
             algorithmIdentifier = .p256PublicKey
-            key = .init(bytes: ArraySlice(p256.x963Representation))
-        case .p384(let p384):
+            key = .init(bytes: bytes[...])
+        case .p384(let bytes):
             algorithmIdentifier = .p384PublicKey
-            key = .init(bytes: ArraySlice(p384.x963Representation))
-        case .p521(let p521):
+            key = .init(bytes: bytes[...])
+        case .p521(let bytes):
             algorithmIdentifier = .p521PublicKey
-            key = .init(bytes: ArraySlice(p521.x963Representation))
-        case .ed25519(let ed25519):
+            key = .init(bytes: bytes[...])
+        case .ed25519(let bytes):
             algorithmIdentifier = .ed25519
-            key = .init(bytes: ArraySlice(ed25519.rawRepresentation))
+            key = .init(bytes: bytes[...])
         }
 
         self.algorithmIdentifier = algorithmIdentifier
@@ -255,73 +185,15 @@ extension Certificate.PublicKey {
     /// The byte array of the public key used in the certificate.
     ///
     /// The `subjectPublicKeyInfoBytes` property represents the public key in its canonical form that is determined by the key's algorithm and common representation.
+    ///
+    /// This is the input a ``Certificate/Verify`` witness reconstructs its backend key
+    /// from; pair it with the certificate's algorithm to know how to read it.
     @inlinable
     public var subjectPublicKeyInfoBytes: ArraySlice<UInt8> {
-        SubjectPublicKeyInfo(self).key.bytes
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P256.Signing.PublicKey {
-    /// Create a P256 Public Key from a given ``Certificate/PublicKey-swift.struct``.
-    ///
-    /// Fails if the key is not a P256 key.
-    ///
-    /// - parameters:
-    ///     - key: The key to unwrap.
-    public init?(_ key: Certificate.PublicKey) {
-        guard case .p256(let inner) = key.backing else {
-            return nil
+        switch self.backing {
+        case .p256(let bytes), .p384(let bytes), .p521(let bytes), .ed25519(let bytes):
+            return bytes[...]
         }
-        self = inner
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P384.Signing.PublicKey {
-    /// Create a P384 Public Key from a given ``Certificate/PublicKey-swift.struct``.
-    ///
-    /// Fails if the key is not a P384 key.
-    ///
-    /// - parameters:
-    ///     - key: The key to unwrap.
-    public init?(_ key: Certificate.PublicKey) {
-        guard case .p384(let inner) = key.backing else {
-            return nil
-        }
-        self = inner
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P521.Signing.PublicKey {
-    /// Create a P521 Public Key from a given ``Certificate/PublicKey-swift.struct``.
-    ///
-    /// Fails if the key is not a P521 key.
-    ///
-    /// - parameters:
-    ///     - key: The key to unwrap.
-    public init?(_ key: Certificate.PublicKey) {
-        guard case .p521(let inner) = key.backing else {
-            return nil
-        }
-        self = inner
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Curve25519.Signing.PublicKey {
-    /// Create a Curve25519 Public Key from a given ``Certificate/PublicKey-swift.struct``.
-    ///
-    /// Fails if the key is not a Curve25519 key.
-    ///
-    /// - parameters:
-    ///     - key: The key to unwrap.
-    public init?(_ key: Certificate.PublicKey) {
-        guard case .ed25519(let inner) = key.backing else {
-            return nil
-        }
-        self = inner
     }
 }
 
@@ -336,7 +208,7 @@ extension Certificate.PublicKey: ISO_8825.DER.ImplicitlyTaggable {
     public init(derEncoded: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         let spki = try SubjectPublicKeyInfo(derEncoded: derEncoded, withIdentifier: identifier)
         // Decode-boundary bridge (N5 Option A): init(spki:) validates the key algorithm
-        // and surfaces Certificate.Error / crypto-backend errors; map to the ASN.1 error.
+        // and its encoded length, and surfaces Certificate.Error; map to the ASN.1 error.
         do {
             try self.init(spki: spki)
         } catch {

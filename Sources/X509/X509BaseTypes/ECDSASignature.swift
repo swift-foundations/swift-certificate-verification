@@ -11,14 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 import ISO_8824
 import ISO_8825
-import Crypto
 
 /// An ECDSA signature is laid out as follows:
 ///
@@ -67,115 +61,15 @@ struct ECDSASignature: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
         }
     }
 
+    /// Build the DER `r`/`s` pair from a fixed-width raw ECDSA signature — the `r || s`
+    /// concatenation, each half padded to the curve's coordinate width.
     @inlinable
-    init(rawSignatureBytes raw: Data) {
+    init(rawSignatureBytes raw: [UInt8]) {
         let half = raw.count / 2
         let r = ArraySlice(normalisingToASN1IntegerForm: raw.prefix(upTo: half))
         let s = ArraySlice(normalisingToASN1IntegerForm: raw.suffix(from: half))
 
         self = ECDSASignature(r: r, s: s)
-    }
-
-    @inlinable
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-    init(_ sig: P256.Signing.ECDSASignature) {
-        self = .init(rawSignatureBytes: sig.rawRepresentation)
-    }
-
-    @inlinable
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-    init(_ sig: P384.Signing.ECDSASignature) {
-        self = .init(rawSignatureBytes: sig.rawRepresentation)
-    }
-
-    @inlinable
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-    init(_ sig: P521.Signing.ECDSASignature) {
-        self = .init(rawSignatureBytes: sig.rawRepresentation)
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P256.Signing.ECDSASignature {
-    @inlinable
-    init?(_ signature: ECDSASignature) {
-        let coordinateByteCount = 32
-
-        guard signature.r.count <= coordinateByteCount && signature.s.count <= coordinateByteCount else {
-            return nil
-        }
-
-        // r and s must be padded out to the coordinate byte count.
-        // We use Data here because Crypto wants that type anyway.
-        var raw = Data()
-        raw.reserveCapacity(2 * coordinateByteCount)
-
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.r.count))
-        raw.append(contentsOf: signature.r)
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.s.count))
-        raw.append(contentsOf: signature.s)
-
-        do {
-            self = try .init(rawRepresentation: raw)
-        } catch {
-            return nil
-        }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P384.Signing.ECDSASignature {
-    @inlinable
-    init?(_ signature: ECDSASignature) {
-        let coordinateByteCount = 48
-
-        guard signature.r.count <= coordinateByteCount && signature.s.count <= coordinateByteCount else {
-            return nil
-        }
-
-        // r and s must be padded out to the coordinate byte count.
-        // We use Data here because Crypto wants that type anyway.
-        var raw = Data()
-        raw.reserveCapacity(2 * coordinateByteCount)
-
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.r.count))
-        raw.append(contentsOf: signature.r)
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.s.count))
-        raw.append(contentsOf: signature.s)
-
-        do {
-            self = try .init(rawRepresentation: raw)
-        } catch {
-            return nil
-        }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P521.Signing.ECDSASignature {
-    @inlinable
-    init?(_ signature: ECDSASignature) {
-        let coordinateByteCount = 66
-
-        guard signature.r.count <= coordinateByteCount && signature.s.count <= coordinateByteCount else {
-            return nil
-        }
-
-        // r and s must be padded out to the coordinate byte count.
-        // We use Data here because Crypto wants that type anyway.
-        var raw = Data()
-        raw.reserveCapacity(2 * coordinateByteCount)
-
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.r.count))
-        raw.append(contentsOf: signature.r)
-        raw.append(contentsOf: repeatElement(0, count: coordinateByteCount - signature.s.count))
-        raw.append(contentsOf: signature.s)
-
-        do {
-            self = try .init(rawRepresentation: raw)
-        } catch {
-            return nil
-        }
     }
 }
 

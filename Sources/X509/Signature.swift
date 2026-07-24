@@ -14,12 +14,6 @@
 
 import ISO_8824
 import ISO_8825
-import Crypto
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {
@@ -31,9 +25,10 @@ extension Certificate {
     /// users to wrestle with the wide variety of runtime types that may represent a
     /// signature.
     ///
-    /// This type is almost entirely opaque. It can be validated by way of
-    /// ``Certificate/PublicKey-swift.struct/isValidSignature(_:for:)-3cbor``.
-    /// Otherwise, this type has essentially no behaviours.
+    /// This type is almost entirely opaque. It is validated by the injected
+    /// ``Certificate/Verify`` witness, which reconstructs whatever signature type its
+    /// backend requires from ``rawRepresentation``. Otherwise, this type has essentially
+    /// no behaviours.
     public struct Signature {
         @usableFromInline
         var backing: BackingSignature
@@ -55,8 +50,7 @@ extension Certificate {
                         .invalidEncoding(reason: "no padding bits are allowed on Ed25519 signatures")
                     )
                 }
-                let signature = Data(signatureBytes.bytes)
-                self.backing = .ed25519(signature)
+                self.backing = .ed25519(Array(signatureBytes.bytes))
             default:
                 throw Certificate.Error.algorithm(
                     .unsupportedSignature(AlgorithmIdentifier(signatureAlgorithm).algorithm)
@@ -86,10 +80,15 @@ extension Certificate.Signature: CustomStringConvertible {
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate.Signature {
+    /// The signature as the model holds it: a decoded DER `r`/`s` pair for ECDSA, and
+    /// the raw signature octets for Ed25519.
+    ///
+    /// `ECDSASignature` is this module's own DER type, not a backend type — holding it
+    /// keeps the module free of a cryptographic dependency.
     @usableFromInline
     enum BackingSignature: Hashable, Sendable {
         case ecdsa(ECDSASignature)
-        case ed25519(Data)
+        case ed25519([UInt8])
 
         @inlinable
         static func == (lhs: BackingSignature, rhs: BackingSignature) -> Bool {
@@ -127,8 +126,8 @@ extension Certificate.Signature {
             var serializer = ISO_8825.DER.Serializer()
             try! serializer.serialize(sig)
             return serializer.serializedBytes
-        case let .ed25519(data):
-            return .init(data)
+        case .ed25519(let bytes):
+            return bytes
         }
     }
 }
@@ -151,211 +150,7 @@ extension ISO_8824.OctetString {
             try! serializer.serialize(sig)
             self = ISO_8824.OctetString(contentBytes: serializer.serializedBytes[...])
         case .ed25519(let sig):
-            self = ISO_8824.OctetString(contentBytes: ArraySlice(sig))
-        }
-    }
-}
-
-// MARK: Public key operations
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P256.Signing.PublicKey {
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: Certificate.Signature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        guard case .ecdsa(let rawInnerSignature) = signature.backing,
-            let innerSignature = P256.Signing.ECDSASignature(rawInnerSignature)
-        else {
-            // Signature mismatch
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<SignatureBytes: DataProtocol, Bytes: DataProtocol>(
-        _ signature: SignatureBytes,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        // Probe: a signature that is not valid DER is a verification failure, not an error.
-        let ecdsaSignature: ECDSASignature
-        do {
-            ecdsaSignature = try ECDSASignature(derEncoded: Array(signature))
-        } catch {
-            return false
-        }
-        guard let innerSignature = P256.Signing.ECDSASignature(ecdsaSignature) else {
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: P256.Signing.ECDSASignature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch signatureAlgorithm {
-        case .ecdsaWithSHA256:
-            return self.isValidSignature(signature, for: SHA256.hash(data: bytes))
-        case .ecdsaWithSHA384:
-            return self.isValidSignature(signature, for: SHA384.hash(data: bytes))
-        case .ecdsaWithSHA512:
-            return self.isValidSignature(signature, for: SHA512.hash(data: bytes))
-        default:
-            return false
-        }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P384.Signing.PublicKey {
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: Certificate.Signature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        guard case .ecdsa(let rawInnerSignature) = signature.backing,
-            let innerSignature = P384.Signing.ECDSASignature(rawInnerSignature)
-        else {
-            // Signature mismatch
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<SignatureBytes: DataProtocol, Bytes: DataProtocol>(
-        _ signature: SignatureBytes,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        // Probe: a signature that is not valid DER is a verification failure, not an error.
-        let ecdsaSignature: ECDSASignature
-        do {
-            ecdsaSignature = try ECDSASignature(derEncoded: Array(signature))
-        } catch {
-            return false
-        }
-        guard let innerSignature = P384.Signing.ECDSASignature(ecdsaSignature) else {
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: P384.Signing.ECDSASignature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch signatureAlgorithm {
-        case .ecdsaWithSHA256:
-            return self.isValidSignature(signature, for: SHA256.hash(data: bytes))
-        case .ecdsaWithSHA384:
-            return self.isValidSignature(signature, for: SHA384.hash(data: bytes))
-        case .ecdsaWithSHA512:
-            return self.isValidSignature(signature, for: SHA512.hash(data: bytes))
-        default:
-            return false
-        }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension P521.Signing.PublicKey {
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: Certificate.Signature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        guard case .ecdsa(let rawInnerSignature) = signature.backing,
-            let innerSignature = P521.Signing.ECDSASignature(rawInnerSignature)
-        else {
-            // Signature mismatch
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<SignatureBytes: DataProtocol, Bytes: DataProtocol>(
-        _ signature: SignatureBytes,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        // Probe: a signature that is not valid DER is a verification failure, not an error.
-        let ecdsaSignature: ECDSASignature
-        do {
-            ecdsaSignature = try ECDSASignature(derEncoded: Array(signature))
-        } catch {
-            return false
-        }
-        guard let innerSignature = P521.Signing.ECDSASignature(ecdsaSignature) else {
-            return false
-        }
-
-        return self.isValidSignature(innerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: P521.Signing.ECDSASignature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch signatureAlgorithm {
-        case .ecdsaWithSHA256:
-            return self.isValidSignature(signature, for: SHA256.hash(data: bytes))
-        case .ecdsaWithSHA384:
-            return self.isValidSignature(signature, for: SHA384.hash(data: bytes))
-        case .ecdsaWithSHA512:
-            return self.isValidSignature(signature, for: SHA512.hash(data: bytes))
-        default:
-            return false
-        }
-    }
-}
-
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension Curve25519.Signing.PublicKey {
-    @inlinable
-    internal func isValidSignature<Bytes: DataProtocol>(
-        _ signature: Certificate.Signature,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        guard case .ed25519(let rawInnerSignature) = signature.backing else {
-            // Signature mismatch
-            return false
-        }
-
-        return self.isValidSignature(rawInnerSignature, for: bytes, signatureAlgorithm: signatureAlgorithm)
-    }
-
-    @inlinable
-    internal func isValidSignature<SignatureBytes: DataProtocol, Bytes: DataProtocol>(
-        _ signature: SignatureBytes,
-        for bytes: Bytes,
-        signatureAlgorithm: Certificate.SignatureAlgorithm
-    ) -> Bool {
-        switch signatureAlgorithm {
-        case .ed25519:
-            return self.isValidSignature(signature, for: bytes)
-        default:
-            return false
+            self = ISO_8824.OctetString(contentBytes: sig[...])
         }
     }
 }
