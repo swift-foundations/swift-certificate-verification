@@ -17,7 +17,7 @@ extension Certificate {
     /// A failure condition raised by the certificate model surfaces.
     ///
     /// Verification outcomes are not errors: policy rejection is reported through
-    /// ``VerificationResult`` and ``PolicyEvaluationResult``, never thrown.
+    /// ``CertificateValidationResult`` and ``PolicyEvaluationResult``, never thrown.
     public enum Error: Swift.Error, Hashable, Sendable {
         /// An algorithm outside the supported verification surface.
         case algorithm(Algorithm)

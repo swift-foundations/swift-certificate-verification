@@ -170,27 +170,6 @@ public struct Verifier<Policy: VerifierPolicy> {
         return .couldNotValidate(policyFailures)
     }
 
-    @available(*, deprecated, renamed: "validate(leaf:intermediates:diagnosticCallback:)")
-    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-    public mutating func validate(
-        leafCertificate: Certificate,
-        intermediates: CertificateStore,
-        diagnosticCallback: ((VerificationDiagnostic) -> Void)? = nil
-    ) async -> VerificationResult {
-        switch await validate(
-            leaf: leafCertificate,
-            intermediates: intermediates,
-            diagnosticCallback: diagnosticCallback
-        ) {
-        case .validCertificate(let ValidatedCertificateChain):
-            return .validCertificate(Array(ValidatedCertificateChain))
-        case .couldNotValidate(let policyFailures):
-            return .couldNotValidate(
-                policyFailures.map { .init($0) }
-            )
-        }
-    }
-
     @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
     private func shouldSkipAddingCertificate(
         partialChain: CandidatePartialChain,
@@ -238,39 +217,6 @@ public struct Verifier<Policy: VerifierPolicy> {
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Verifier: Sendable where Policy: Sendable {}
-
-@available(*, deprecated, renamed: "CertificateValidationResult")
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-public enum VerificationResult: Hashable, Sendable {
-    case validCertificate([Certificate])
-    case couldNotValidate([PolicyFailure])
-}
-
-@available(*, deprecated, renamed: "CertificateValidationResult.PolicyFailure")
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension VerificationResult {
-    public struct PolicyFailure: Hashable, Sendable {
-        public var chain: UnverifiedCertificateChain
-        public var policyFailureReason: PolicyFailureReason
-
-        @inlinable
-        public init(chain: UnverifiedCertificateChain, policyFailureReason: PolicyFailureReason) {
-            self.chain = chain
-            self.policyFailureReason = policyFailureReason
-        }
-
-        @inlinable
-        init(_ other: CertificateValidationResult.PolicyFailure) {
-            self.chain = other.chain
-            self.policyFailureReason = other.policyFailureReason
-        }
-
-        @inlinable
-        func upgrade() -> CertificateValidationResult.PolicyFailure {
-            .init(chain: self.chain, policyFailureReason: self.policyFailureReason)
-        }
-    }
-}
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public enum CertificateValidationResult: Hashable, Sendable {

@@ -217,43 +217,6 @@ extension CertificateStore {
                 )
             }()
 
-            @available(*, deprecated, message: "test for replacement in testCustomCertificateStore")
-            @Test func `custom certificate store deprecated`() async throws {
-                // MUST fail due to encoding of DN mismatch:
-                var concreteStore = CertificateStore()
-                concreteStore.append(Self.ca1)
-
-                var concreteVerifier = Verifier(rootCertificates: concreteStore) {
-                    RFC5280Policy()
-                }
-                let concreteResult = await concreteVerifier.validate(
-                    leafCertificate: Self.leafCert,
-                    intermediates: CertificateStore()
-                )
-
-                guard case .couldNotValidate = concreteResult else {
-                    Issue.record("Incorrectly validated: \(concreteResult)")
-                    return
-                }
-
-                // The custom CertStore should normalize the DN so it no longer fails:
-                var customStore = CertificateStore(custom: CertStore([]))
-                customStore.append(Self.ca1)
-
-                var customVerifier = Verifier(rootCertificates: customStore) {
-                    RFC5280Policy()
-                }
-                let customResult = await customVerifier.validate(
-                    leafCertificate: Self.leafCert,
-                    intermediates: CertificateStore()
-                )
-
-                guard case .validCertificate(_) = customResult else {
-                    Issue.record("Failed to validate: \(customResult)")
-                    return
-                }
-            }
-
             @Test func `custom certificate store`() async throws {
                 // MUST fail due to encoding of DN mismatch:
                 var concreteStore = CertificateStore()

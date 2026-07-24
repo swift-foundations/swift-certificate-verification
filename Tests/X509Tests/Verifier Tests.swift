@@ -552,42 +552,6 @@ import ISO_8825
 
 @available(macOS 11.0, iOS 14, tvOS 14, watchOS 7, macCatalyst 14, visionOS 1.0, *)
 extension `Verifier Tests`.Integration {
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `trivial chain building deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
 
     @Test
     func `trivial chain building`() async throws {
@@ -619,43 +583,6 @@ extension `Verifier Tests`.Integration {
                 .foundCandidateIssuersOfPartialChainInRootStore(
                     [Self.localhostLeaf, Self.intermediate1],
                     issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `roots with SKI are preferred deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1WithoutSubjectKeyIdentifier, Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1, Self.ca1WithoutSubjectKeyIdentifier]
                 ),
                 .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
             ]
@@ -698,34 +625,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `missing intermediate fails to build deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore(),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .couldNotValidate(let policyResults) = result else {
-            Issue.record("Accidentally validated: \(result)")
-            return
-        }
-
-        #expect(policyResults == [])
-        print(log)
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .couldNotValidateLeafCertificate(Self.localhostLeaf),
-            ]
-        )
-    }
-
     @Test
     func `missing intermediate fails to build`() async throws {
         let roots = CertificateStore([Self.ca1])
@@ -748,38 +647,6 @@ extension `Verifier Tests`.Integration {
         #expect(
             log == [
                 .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .couldNotValidateLeafCertificate(Self.localhostLeaf),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `missing root fails to build deprecated`() async throws {
-        let roots = CertificateStore()
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .couldNotValidate(let policyResults) = result else {
-            Issue.record("Accidentally validated: \(result)")
-            return
-        }
-
-        #expect(policyResults == [])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
                 .couldNotValidateLeafCertificate(Self.localhostLeaf),
             ]
         )
@@ -816,42 +683,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `extra roots are ignored deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
-
     @Test
     func `extra roots are ignored`() async throws {
         let roots = CertificateStore([Self.ca1, Self.ca2])
@@ -870,42 +701,6 @@ extension `Verifier Tests`.Integration {
         }
 
         #expect(Array(chain) == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `putting roots in the intermediaries isnt a problem deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1, Self.ca1, Self.ca2]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
         #expect(
             log == [
                 .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
@@ -958,50 +753,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `supports cross signed root without trouble deprecated`() async throws {
-        let roots = CertificateStore([Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1, Self.ca1CrossSignedByCA2]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2])
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1CrossSignedByCA2]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2],
-                    issuers: [Self.ca2]
-                ),
-                .foundValidCertificateChain([
-                    Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2,
-                ]),
-            ]
-        )
-    }
-
     @Test
     func `supports cross signed root without trouble`() async throws {
         let roots = CertificateStore([Self.ca2])
@@ -1045,42 +796,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `builds the shorter path in the case of cross signed roots deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1, Self.ca2CrossSignedByCA1, Self.ca1CrossSignedByCA2]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
-
     @Test
     func `builds the shorter path in the case of cross signed roots`() async throws {
         let roots = CertificateStore([Self.ca1, Self.ca2])
@@ -1105,42 +820,6 @@ extension `Verifier Tests`.Integration {
                 .foundCandidateIssuersOfPartialChainInIntermediateStore(
                     [Self.localhostLeaf],
                     issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `prefers to use intermediates with SKI that matches deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1, Self.intermediate1WithoutSKIAKI]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1, Self.intermediate1WithoutSKIAKI]
                 ),
                 .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
                 .foundCandidateIssuersOfPartialChainInRootStore(
@@ -1187,42 +866,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `prefers no SKI to non matching SKI deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1WithIncorrectSKIAKI, Self.intermediate1WithoutSKIAKI]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1WithoutSKIAKI, Self.ca1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1WithoutSKIAKI, Self.intermediate1WithIncorrectSKIAKI]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1WithoutSKIAKI]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1WithoutSKIAKI],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1WithoutSKIAKI, Self.ca1]),
-            ]
-        )
-    }
-
     @Test
     func `prefers no SKI to non matching SKI`() async throws {
         let roots = CertificateStore([Self.ca1])
@@ -1254,57 +897,6 @@ extension `Verifier Tests`.Integration {
                     issuers: [Self.ca1]
                 ),
                 .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1WithoutSKIAKI, Self.ca1]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `rejects roots that did not sign the cert before them deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1WithAlternativePrivateKey, Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.ca1CrossSignedByCA2, Self.ca2CrossSignedByCA1, Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1WithAlternativePrivateKey]
-                ),
-                .issuerHasNotSignedCertificate(
-                    Self.ca1WithAlternativePrivateKey,
-                    partialChain: [Self.localhostLeaf, Self.intermediate1]
-                ),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1CrossSignedByCA2]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2],
-                    issuers: [Self.ca2]
-                ),
-                .foundValidCertificateChain([
-                    Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2,
-                ]),
             ]
         )
     }
@@ -1342,61 +934,6 @@ extension `Verifier Tests`.Integration {
                 .issuerHasNotSignedCertificate(
                     Self.ca1WithAlternativePrivateKey,
                     partialChain: [Self.localhostLeaf, Self.intermediate1]
-                ),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1CrossSignedByCA2]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2],
-                    issuers: [Self.ca2]
-                ),
-                .foundValidCertificateChain([
-                    Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2,
-                ]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `policy failures can find longer paths deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.ca2])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) {
-            FailIfCertInChainPolicy(forbiddenCert: Self.ca1)
-            Self.defaultPolicy
-        }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1, Self.ca2CrossSignedByCA1, Self.ca1CrossSignedByCA2]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1, Self.ca1CrossSignedByCA2, Self.ca2])
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.localhostLeaf],
-                    issuers: [Self.intermediate1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf, Self.intermediate1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.localhostLeaf, Self.intermediate1],
-                    issuers: [Self.ca1]
-                ),
-                .chainFailsToMeetPolicy(
-                    UnverifiedCertificateChain([Self.localhostLeaf, Self.intermediate1, Self.ca1]),
-                    reason: .init("chain must not contain forbidden certificate")
                 ),
                 .foundCandidateIssuersOfPartialChainInIntermediateStore(
                     [Self.localhostLeaf, Self.intermediate1],
@@ -1468,70 +1005,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `insane PKI can still build deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let intermediates = CertificateStore([Self.t1, Self.t2, Self.t3, Self.x2, Self.x1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.insaneLeaf,
-            intermediates: intermediates,
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1, Self.t1, Self.ca1])
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.insaneLeaf],
-                    issuers: [Self.t3, Self.t2, Self.t1]
-                ),
-                .issuerHasNotSignedCertificate(Self.t1, partialChain: [Self.insaneLeaf]),
-                .issuerHasNotSignedCertificate(Self.t2, partialChain: [Self.insaneLeaf]),
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf, Self.t3]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.insaneLeaf, Self.t3],
-                    issuers: [Self.x2, Self.x1]
-                ),
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf, Self.t3, Self.x2]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.insaneLeaf, Self.t3, Self.x2],
-                    issuers: [Self.t3, Self.t2, Self.t1]
-                ),
-                .issuerIsAlreadyInTheChain([Self.insaneLeaf, Self.t3, Self.x2], issuer: Self.t3),
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.insaneLeaf, Self.t3, Self.x2, Self.t2],
-                    issuers: [Self.x2, Self.x1]
-                ),
-                .issuerIsAlreadyInTheChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2], issuer: Self.x2),
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1]),
-                .foundCandidateIssuersOfPartialChainInIntermediateStore(
-                    [Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1],
-                    issuers: [Self.t3, Self.t2, Self.t1]
-                ),
-                .issuerIsAlreadyInTheChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1], issuer: Self.t2),
-                .issuerIsAlreadyInTheChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1], issuer: Self.t3),
-                .searchingForIssuerOfPartialChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1, Self.t1]),
-                .foundCandidateIssuersOfPartialChainInRootStore(
-                    [Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1, Self.t1],
-                    issuers: [Self.ca1]
-                ),
-                .foundValidCertificateChain([Self.insaneLeaf, Self.t3, Self.x2, Self.t2, Self.x1, Self.t1, Self.ca1]),
-            ]
-        )
-    }
-
     @Test
     func `insane PKI can still build`() async throws {
         let roots = CertificateStore([Self.ca1])
@@ -1595,32 +1068,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `self signed certs are rejected when not in the trust store deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.isolatedSelfSignedCert,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .couldNotValidate = result else {
-            Issue.record("Incorrectly validated: \(result)")
-            return
-        }
-
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.isolatedSelfSignedCert]),
-                .couldNotValidateLeafCertificate(Self.isolatedSelfSignedCert),
-            ]
-        )
-    }
-
     @Test
     func `self signed certs are rejected when not in the trust store`() async throws {
         let roots = CertificateStore([Self.ca1])
@@ -1646,32 +1093,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `self signed certs are trusted when in trust store deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.isolatedSelfSignedCert])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.isolatedSelfSignedCert,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.isolatedSelfSignedCert])
-        #expect(
-            log == [
-                .foundValidCertificateChain([Self.isolatedSelfSignedCert])
-            ]
-        )
-    }
-
     @Test
     func `self signed certs are trusted when in trust store`() async throws {
         let roots = CertificateStore([Self.ca1, Self.isolatedSelfSignedCert])
@@ -1693,41 +1114,6 @@ extension `Verifier Tests`.Integration {
         #expect(
             log == [
                 .foundValidCertificateChain([Self.isolatedSelfSignedCert])
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `trust roots can be non self signed leaves deprecated`() async throws {
-        // we use a custom policy here to ignore the fact that the basic constraints extension is critical.
-        struct IgnoreBasicConstraintsPolicy: VerifierPolicy {
-            let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] = [.X509ExtensionID.basicConstraints]
-
-            func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
-                return .meetsPolicy
-            }
-        }
-
-        let roots = CertificateStore([Self.localhostLeaf])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { IgnoreBasicConstraintsPolicy() }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf])
-        #expect(
-            log == [
-                .foundValidCertificateChain([Self.localhostLeaf])
             ]
         )
     }
@@ -1766,34 +1152,6 @@ extension `Verifier Tests`.Integration {
         )
     }
 
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `trust roots can be non self signed intermediates deprecated`() async throws {
-        let roots = CertificateStore([Self.intermediate1])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.localhostLeaf,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .validCertificate(let chain) = result else {
-            Issue.record("Failed to validate: \(result)")
-            return
-        }
-
-        #expect(chain == [Self.localhostLeaf, Self.intermediate1])
-        #expect(
-            log == [
-                .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
-                .foundCandidateIssuersOfPartialChainInRootStore([Self.localhostLeaf], issuers: [Self.intermediate1]),
-                .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1]),
-            ]
-        )
-    }
-
     @Test
     func `trust roots can be non self signed intermediates`() async throws {
         let roots = CertificateStore([Self.intermediate1])
@@ -1817,34 +1175,6 @@ extension `Verifier Tests`.Integration {
                 .searchingForIssuerOfPartialChain([Self.localhostLeaf]),
                 .foundCandidateIssuersOfPartialChainInRootStore([Self.localhostLeaf], issuers: [Self.intermediate1]),
                 .foundValidCertificateChain([Self.localhostLeaf, Self.intermediate1]),
-            ]
-        )
-    }
-
-    @available(*, deprecated, message: "deprecated because it uses deprecated API")
-    @Test
-    func `we police critical extensions on leaf certs deprecated`() async throws {
-        let roots = CertificateStore([Self.ca1, Self.isolatedSelfSignedCertWithWeirdCriticalExtension])
-        let log = DiagnosticsLog()
-
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
-        let result = await verifier.validate(
-            leafCertificate: Self.isolatedSelfSignedCertWithWeirdCriticalExtension,
-            intermediates: CertificateStore([Self.intermediate1]),
-            diagnosticCallback: log.append(_:)
-        )
-
-        guard case .couldNotValidate = result else {
-            Issue.record("Incorrectly validated: \(result)")
-            return
-        }
-
-        #expect(
-            log == [
-                .leafCertificateHasUnhandledCriticalExtension(
-                    Self.isolatedSelfSignedCertWithWeirdCriticalExtension,
-                    handledCriticalExtensions: Self.defaultPolicy.verifyingCriticalExtensions
-                )
             ]
         )
     }
