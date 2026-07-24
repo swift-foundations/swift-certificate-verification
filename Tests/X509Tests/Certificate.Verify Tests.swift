@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+@preconcurrency import Crypto
+import ISO_8825
 import Testing
 @testable import Certificates
 
@@ -123,6 +125,32 @@ extension Certificate.Verify.Test.Unit {
         small[width - 1] = 0x09
         small[2 * width - 1] = 0x07
         #expect(roundTrips(small))
+    }
+
+    /// The parked Crypto-typed ``Certificate/PublicKey`` initialisers must produce exactly
+    /// what the DER parse path produces for the same key.
+    ///
+    /// They are the only place where a backend key object is turned into the model's
+    /// algorithm-plus-bytes form, and the conversion is one `x963Representation` or
+    /// `rawRepresentation` call that **compiles and type-checks whether or not it is the
+    /// right encoding**. Nothing else exercises them: every current consumer sits in a file
+    /// excluded from this target, so the file would otherwise be compiled and unverified.
+    ///
+    /// Round-tripping through SPKI is what makes this an assertion rather than a
+    /// restatement — it checks the parked initialiser against the independent path that
+    /// certificates actually take, instead of comparing the conversion with itself.
+    @Test func `the parked Crypto initialisers agree with the DER parse path`() throws {
+        func agrees(_ modelled: Certificate.PublicKey) throws -> Bool {
+            var serializer = ISO_8825.DER.Serializer()
+            try serializer.serialize(SubjectPublicKeyInfo(modelled))
+            let spki = try SubjectPublicKeyInfo(derEncoded: serializer.serializedBytes)
+            return try Certificate.PublicKey(spki: spki) == modelled
+        }
+
+        #expect(try agrees(Certificate.PublicKey(P256.Signing.PrivateKey().publicKey)))
+        #expect(try agrees(Certificate.PublicKey(P384.Signing.PrivateKey().publicKey)))
+        #expect(try agrees(Certificate.PublicKey(P521.Signing.PrivateKey().publicKey)))
+        #expect(try agrees(Certificate.PublicKey(Curve25519.Signing.PrivateKey().publicKey)))
     }
 }
 
