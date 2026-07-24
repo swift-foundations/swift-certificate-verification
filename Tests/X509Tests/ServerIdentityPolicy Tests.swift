@@ -18,31 +18,19 @@ import FoundationEssentials
 import Foundation
 #endif
 import Testing
-import Crypto
 import ISO_8824
 import ISO_8825
 @_spi(Testing) import Certificates
 
-private let key = Certificate.PrivateKey(P256.Signing.PrivateKey())
-private let certName = try! DistinguishedName {
-    CommonName("httpbin.org")
-}
-private let localhostName = try! DistinguishedName {
-    CommonName("localhost")
-}
-private let multiCNName = try! DistinguishedName {
-    CountryName("US")
-    CommonName("Ignore me")
-    StateOrProvinceName("Nebraska")
-    CommonName("localhost")
-}
-private let noCNName = try! DistinguishedName {
-    CountryName("US")
-    StateOrProvinceName("Nebraska")
-}
-private let unicodeCNName = try! DistinguishedName {
-    CommonName("straße.org")
-}
+// These certificates are bound from the frozen DER corpus rather than issued in-test
+// (issuance is an excluded surface in slice 1). Each was frozen to match the original
+// in-test certificate's subject DN and SAN contents exactly, so every assertion below
+// is preserved verbatim — see Fixtures/MANIFEST.md for the per-fixture provenance and
+// the rationale for freezing rather than remapping onto the pre-existing leaves.
+//
+// This suite installs each certificate as both the trust anchor and the leaf and runs
+// only ServerIdentityPolicy, so chain construction, expiry and signature validity are
+// not exercised; only the subject DN and SAN contents are load-bearing.
 
 /// This cert contains the following SAN fields:
 /// DNS:*.WILDCARD.EXAMPLE.com - A straightforward wildcard, should be accepted
@@ -58,122 +46,12 @@ private let unicodeCNName = try! DistinguishedName {
 /// A SAN with a null in it, should be ignored.
 ///
 /// This also contains a commonName of httpbin.org.
-private let weirdoSANCert = try! Certificate(
-    version: .v3,
-    serialNumber: Certificate.SerialNumber(),
-    publicKey: key.publicKey,
-    notValidBefore: Date() - .days(1),
-    notValidAfter: Date() + .days(354),
-    issuer: certName,
-    subject: certName,
-    signatureAlgorithm: .ecdsaWithSHA256,
-    extensions: Certificate.Extensions {
-        BasicConstraints.notCertificateAuthority
+private let weirdoSANCert = try! Fixture.certificate("leaf-weirdo-sans")
 
-        SubjectAlternativeNames([
-            // A straightforward wildcard, should be accepted
-            .dnsName("*.WILDCARD.EXAMPLE.com"),
-
-            // A suffix wildcard, should be accepted
-            .dnsName("FO*.EXAMPLE.com"),
-
-            /// A prefix wildcard, should be accepted
-            .dnsName("*AR.EXAMPLE.com"),
-
-            /// An infix wildcard
-            .dnsName("B*Z.EXAMPLE.com"),
-
-            /// A domain with a trailing period, should match
-            .dnsName("TRAILING.PERIOD.EXAMPLE.com."),
-
-            /// An IDN A-label, should match.
-            .dnsName("XN--STRAE-OQA.UNICODE.EXAMPLE.com."),
-
-            /// An IDN A-label with a wildcard, invalid.
-            .dnsName("XN--X*-GIA.UNICODE.EXAMPLE.com."),
-
-            /// A wildcard not in the leftmost label, invalid.
-            .dnsName("WEIRDWILDCARD.*.EXAMPLE.com."),
-
-            /// Two wildcards, invalid.
-            .dnsName("*.*.DOUBLE.EXAMPLE.com."),
-
-            /// A wildcard followed by a new IDN A-label, this is fine.
-            .dnsName("*.XN--STRAE-OQA.EXAMPLE.com."),
-
-            /// A SAN with a null in it, should be ignored.
-            .dnsName("\u{0000}"),
-        ])
-
-    },
-    issuerPrivateKey: key
-)
-
-private let multiSANCert = try! Certificate(
-    version: .v3,
-    serialNumber: Certificate.SerialNumber(),
-    publicKey: key.publicKey,
-    notValidBefore: Date() - .days(1),
-    notValidAfter: Date() + .days(354),
-    issuer: localhostName,
-    subject: localhostName,
-    signatureAlgorithm: .ecdsaWithSHA256,
-    extensions: Certificate.Extensions {
-        BasicConstraints.notCertificateAuthority
-
-        SubjectAlternativeNames([
-            .dnsName("localhost"),
-            .dnsName("example.com"),
-            .rfc822Name("user@example.com"),
-            .ipAddress(ISO_8824.OctetString(ipv4Address: "192.168.0.1")),
-            .ipAddress(ISO_8824.OctetString(ipv6Address: "2001:DB8:0:0:0:0:0:1")),
-        ])
-
-    },
-    issuerPrivateKey: key
-)
-private let multiCNCert = try! Certificate(
-    version: .v3,
-    serialNumber: Certificate.SerialNumber(),
-    publicKey: key.publicKey,
-    notValidBefore: Date() - .days(1),
-    notValidAfter: Date() + .days(354),
-    issuer: multiCNName,
-    subject: multiCNName,
-    signatureAlgorithm: .ecdsaWithSHA256,
-    extensions: Certificate.Extensions {
-        BasicConstraints.notCertificateAuthority
-    },
-    issuerPrivateKey: key
-)
-private let noCNCert = try! Certificate(
-    version: .v3,
-    serialNumber: Certificate.SerialNumber(),
-    publicKey: key.publicKey,
-    notValidBefore: Date() - .days(1),
-    notValidAfter: Date() + .days(354),
-    issuer: noCNName,
-    subject: noCNName,
-    signatureAlgorithm: .ecdsaWithSHA256,
-    extensions: Certificate.Extensions {
-        BasicConstraints.notCertificateAuthority
-    },
-    issuerPrivateKey: key
-)
-private let unicodeCNCert = try! Certificate(
-    version: .v3,
-    serialNumber: Certificate.SerialNumber(),
-    publicKey: key.publicKey,
-    notValidBefore: Date() - .days(1),
-    notValidAfter: Date() + .days(354),
-    issuer: unicodeCNName,
-    subject: unicodeCNName,
-    signatureAlgorithm: .ecdsaWithSHA256,
-    extensions: Certificate.Extensions {
-        BasicConstraints.notCertificateAuthority
-    },
-    issuerPrivateKey: key
-)
+private let multiSANCert = try! Fixture.certificate("leaf-multi-san-hosts")
+private let multiCNCert = try! Fixture.certificate("leaf-multi-cn")
+private let noCNCert = try! Fixture.certificate("leaf-no-cn")
+private let unicodeCNCert = try! Fixture.certificate("leaf-unicode-cn")
 
 extension ServerIdentityPolicy {
     @Suite

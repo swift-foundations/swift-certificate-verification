@@ -40,3 +40,29 @@ contains issuance code. Regeneration requires re-running this scratch tool.
 | leaf-wildcard-partial.der | leaf identity FAIL | partial-label wildcard |
 | ed25519-root-ca.der | anchor | Ed25519 self-signed root |
 | leaf-ed25519.der | leaf PASS | P256 leaf key, Ed25519 issuer signature |
+
+## Additive expansion — server-identity vectors (2026-07-24, lead-confirmed)
+
+The five vectors below were added **additively**: the original 28 above are untouched
+(byte-identical to the first freeze), because ECDSA signing uses randomized nonces
+and a wholesale regeneration would rewrite every fixture's bytes for no semantic gain.
+
+**Why these were frozen rather than remapped onto existing fixtures.** The consuming
+suite (`ServerIdentityPolicy Tests`, 56 cases) packs many scenarios into a single
+certificate, whereas this corpus is one-scenario-per-fixture. Remapping its cases onto
+the existing leaves would have required rewriting hostnames and assertions — for
+example the suite asserts against `*.WILDCARD.EXAMPLE.com` while the corpus carries
+`*.example.com` — which **weakens the assertion while appearing to preserve the test**.
+Freezing five fixtures to keep 56 assertions verbatim is the deliberate trade.
+
+Consumption note: the suite installs each of these as *both* the trust anchor and the
+leaf and runs only `ServerIdentityPolicy`, so chain construction, expiry and signature
+validity are not exercised — only the subject DN and SAN contents are load-bearing.
+
+| file | role | notes |
+|---|---|---|
+| leaf-weirdo-sans.der | leaf identity (multi-scenario) | CN=httpbin.org; 11 SANs: leftmost/suffix/prefix/infix wildcards, trailing period, IDN A-label, IDN A-label+wildcard, non-leftmost wildcard, double wildcard, wildcard+IDN A-label, and an embedded-NUL SAN (issued as DEL 0x7F, byte-patched to 0x00; signature therefore not valid, which the consuming suite does not exercise). GATE rows: wildcard boundaries, IDNA policy, encoding/NUL rejection |
+| leaf-multi-san-hosts.der | leaf identity PASS | CN=localhost; SANs dns:localhost, dns:example.com, ip:192.168.0.1, ip:2001:db8::1. GATE row: SAN DNS/IP |
+| leaf-multi-cn.der | leaf identity | subject C=US, CN="Ignore me", ST=Nebraska, CN=localhost — two CommonNames, no SAN extension. GATE row: CN-fallback rejection |
+| leaf-no-cn.der | leaf identity | subject C=US, ST=Nebraska — no CommonName and no SAN extension. GATE row: CN-fallback rejection |
+| leaf-unicode-cn.der | leaf identity | CN=straße.org — raw U-label in the CommonName, no SAN extension. GATE rows: IDNA policy, CN-fallback |

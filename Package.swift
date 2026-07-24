@@ -79,7 +79,6 @@ let package = Package(
                 "Certificate.Signature Tests.swift",
                 "CertificateStore Tests.swift",
                 "RFC5280Policy Tests.swift",
-                "ServerIdentityPolicy Tests.swift",
                 "Verifier Tests.swift",
             ],
             resources: [.copy("Fixtures")]
