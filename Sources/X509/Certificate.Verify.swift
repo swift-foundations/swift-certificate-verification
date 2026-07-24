@@ -64,8 +64,9 @@ extension Certificate {
 extension Certificate.Verify {
     /// A witness that rejects every signature.
     ///
-    /// The fail-closed default. It exists so that a verifier constructed without a real
-    /// witness cannot silently accept chains: absence of a verification capability must
-    /// look like failed verification, never like success.
+    /// Provided for tests and callers that deliberately want a verifier which validates
+    /// nothing. It is **not** a default: ``Verifier`` requires its witness explicitly,
+    /// so that omitting one is a compile error rather than a verifier that silently
+    /// rejects every chain. The behaviour is useful; only defaulting to it was wrong.
     public static let rejectingAll = Certificate.Verify { _, _, _, _ in false }
 }

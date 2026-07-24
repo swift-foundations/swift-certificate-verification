@@ -298,7 +298,7 @@ extension PolicyBuilder.Test.Unit {
         // RFC5280Policy takes the validation instant by injection (Q4 ruling: the
         // verifier never reads a system clock), so this compile-time composition
         // check supplies the corpus's frozen 2026-01-01 instant.
-        let _: Verifier<AnyPolicy> = Verifier(rootCertificates: CertificateStore()) {
+        let _: Verifier<AnyPolicy> = Verifier(rootCertificates: CertificateStore(), verify: .crypto) {
             AnyPolicy {
                 RFC5280Policy(validationTime: Instant(secondsSinceUnixEpoch: 1_767_225_600))
             }

@@ -69,6 +69,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -86,6 +87,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "example.com", serverIP: nil)
             }
@@ -103,6 +105,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
             }
@@ -120,6 +123,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
             }
@@ -137,6 +141,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.1")
             }
@@ -154,6 +159,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::1")
             }
@@ -171,6 +177,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.2")
             }
@@ -188,6 +195,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::2")
             }
@@ -205,6 +213,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -222,6 +231,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([multiCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
             }
@@ -239,6 +249,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([noCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -256,6 +267,7 @@ extension ServerIdentityPolicy.Test.Unit {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
             }
@@ -275,6 +287,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "example.com.", serverIP: nil)
             }
@@ -292,6 +305,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "this.wildcard.example.com", serverIP: nil)
             }
@@ -309,6 +323,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.example.com", serverIP: nil)
             }
@@ -326,6 +341,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "bar.example.com", serverIP: nil)
             }
@@ -343,6 +359,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "baz.example.com", serverIP: nil)
             }
@@ -360,6 +377,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "trailing.period.example.com", serverIP: nil)
             }
@@ -377,6 +395,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "straße.unicode.example.com", serverIP: nil)
             }
@@ -394,6 +413,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--strae-oqa.unicode.example.com", serverIP: nil)
             }
@@ -411,6 +431,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--xx-gia.unicode.example.com", serverIP: nil)
             }
@@ -428,6 +449,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "weirdwildcard.nomatch.example.com", serverIP: nil)
             }
@@ -445,6 +467,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "one.two.double.example.com", serverIP: nil)
             }
@@ -462,6 +485,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.straße.example.com", serverIP: nil)
             }
@@ -479,6 +503,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.xn--strae-oqa.example.com", serverIP: nil)
             }
@@ -496,6 +521,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "nul\u{0000}l.example.com", serverIP: nil)
             }
@@ -513,6 +539,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([unicodeCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "straße.org", serverIP: nil)
             }
@@ -530,6 +557,7 @@ extension ServerIdentityPolicy.Test.`Edge Case` {
         let roots = CertificateStore([unicodeCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--strae-oqa.org", serverIP: nil)
             }
@@ -550,6 +578,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -568,6 +597,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "example.com", serverIP: nil)
             }
@@ -586,6 +616,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "example.com.", serverIP: nil)
             }
@@ -604,6 +635,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
             }
@@ -622,6 +654,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
             }
@@ -640,6 +673,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.1")
             }
@@ -658,6 +692,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::1")
             }
@@ -676,6 +711,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.2")
             }
@@ -694,6 +730,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::2")
             }
@@ -712,6 +749,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "this.wildcard.example.com", serverIP: nil)
             }
@@ -730,6 +768,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.example.com", serverIP: nil)
             }
@@ -748,6 +787,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "bar.example.com", serverIP: nil)
             }
@@ -766,6 +806,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "baz.example.com", serverIP: nil)
             }
@@ -784,6 +825,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "trailing.period.example.com", serverIP: nil)
             }
@@ -802,6 +844,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "straße.unicode.example.com", serverIP: nil)
             }
@@ -820,6 +863,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--strae-oqa.unicode.example.com", serverIP: nil)
             }
@@ -838,6 +882,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--xx-gia.unicode.example.com", serverIP: nil)
             }
@@ -856,6 +901,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "weirdwildcard.nomatch.example.com", serverIP: nil)
             }
@@ -874,6 +920,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "one.two.double.example.com", serverIP: nil)
             }
@@ -892,6 +939,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.straße.example.com", serverIP: nil)
             }
@@ -910,6 +958,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "foo.xn--strae-oqa.example.com", serverIP: nil)
             }
@@ -928,6 +977,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "nul\u{0000}l.example.com", serverIP: nil)
             }
@@ -946,6 +996,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -964,6 +1015,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([multiCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
             }
@@ -982,6 +1034,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([unicodeCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "straße.org", serverIP: nil)
             }
@@ -1000,6 +1053,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([unicodeCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "xn--strae-oqa.org", serverIP: nil)
             }
@@ -1018,6 +1072,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([noCNCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
             }
@@ -1036,6 +1091,7 @@ extension ServerIdentityPolicy.Test.Deprecated {
         let roots = CertificateStore([weirdoSANCert])
         var verifier = Verifier(
             rootCertificates: roots,
+            verify: .crypto,
             policy: {
                 ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
             }

@@ -23,15 +23,21 @@ public struct Verifier<Policy: VerifierPolicy> {
     /// The injected signature-verification capability.
     ///
     /// This module performs no cryptography of its own; chain verification calls this
-    /// witness at its single signature check. It defaults to ``Certificate/Verify/rejectingAll``
-    /// so that a verifier built without a real witness fails closed rather than
-    /// silently accepting unverified chains.
+    /// witness at its single signature check.
+    ///
+    /// It is deliberately **required**, with no default. A default would have to be
+    /// either a real backend — which this module cannot have, that being the point — or
+    /// a rejecting stub, and a rejecting stub makes "I forgot the witness" a verifier
+    /// that silently validates nothing, discoverable only as puzzling downstream
+    /// failures. Requiring it turns that mistake into a compile error at every
+    /// construction site. ``Certificate/Verify/rejectingAll`` remains available for
+    /// tests that deliberately want a rejecting verifier; only the *default* was wrong.
     public var verify: Certificate.Verify
 
     @inlinable
     public init(
         rootCertificates: CertificateStore,
-        verify: Certificate.Verify = .rejectingAll,
+        verify: Certificate.Verify,
         @PolicyBuilder policy: () throws -> Policy
     ) rethrows {
         self.rootCertificates = rootCertificates
