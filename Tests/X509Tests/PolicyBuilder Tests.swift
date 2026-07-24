@@ -20,8 +20,8 @@ import Foundation
 import Testing
 import ISO_8824
 import ISO_8825
+import Time_Primitive
 @testable import Certificates
-@preconcurrency import Crypto
 
 private struct Policy: VerifierPolicy {
     var result: PolicyEvaluationResult = .meetsPolicy
@@ -295,9 +295,12 @@ extension PolicyBuilder.Test.Unit {
 
     @Test func `any policy type is preserved`() {
         // tested at compile time
+        // RFC5280Policy takes the validation instant by injection (Q4 ruling: the
+        // verifier never reads a system clock), so this compile-time composition
+        // check supplies the corpus's frozen 2026-01-01 instant.
         let _: Verifier<AnyPolicy> = Verifier(rootCertificates: CertificateStore()) {
             AnyPolicy {
-                RFC5280Policy()
+                RFC5280Policy(validationTime: Instant(secondsSinceUnixEpoch: 1_767_225_600))
             }
         }
     }

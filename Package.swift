@@ -78,7 +78,6 @@ let package = Package(
                 "Certificate.DER Tests.swift",
                 "Certificate.Signature Tests.swift",
                 "CertificateStore Tests.swift",
-                "PolicyBuilder Tests.swift",
                 "RFC5280Policy Tests.swift",
                 "ServerIdentityPolicy Tests.swift",
                 "Verifier Tests.swift",
