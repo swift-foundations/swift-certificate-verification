@@ -33,10 +33,17 @@ let package = Package(
         // URI presentation parsing (bucket-5 reuse): RFC_3986.URI replaces Foundation.URL
         // for name-constraint host extraction.
         .package(url: "https://github.com/swift-ietf/swift-rfc-3986.git", branch: "main"),
-        // TEMPORARY BRIDGE — remove at the swift-certificates-crypto witness reshape.
-        // The verify/hash surfaces (Signature, ECDSASignature, CertificatePublicKey,
-        // Digests, SubjectKeyIdentifier) still import Crypto pending that design arc;
-        // main-target Crypto is the N5 STOP condition the witness extraction resolves.
+        // TEST-TARGET ONLY. The witness reshape removed Crypto from the `Certificates`
+        // target entirely — it depends on none of this — which is what discharges the
+        // N5 STOP on a cryptographic import in an Institute main target. This dependency
+        // remains solely so the test target can bind the Crypto-backed
+        // `Certificate.Verify` witness, which is the prototype of the future
+        // swift-certificates-crypto adapter.
+        //
+        // Note for the clean-room record: apple/swift-asn1 enters the resolved graph
+        // transitively through this dependency (swift-crypto declares it `from: "1.2.0"`,
+        // floating to 1.7.1). It is FETCHED, never imported by Institute code, and must
+        // not be recorded as pruned.
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.3.0"),
     ],
     targets: [
