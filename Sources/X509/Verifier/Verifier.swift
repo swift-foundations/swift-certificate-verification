@@ -20,9 +20,22 @@ public struct Verifier<Policy: VerifierPolicy> {
 
     public var policy: Policy
 
+    /// The injected signature-verification capability.
+    ///
+    /// This module performs no cryptography of its own; chain verification calls this
+    /// witness at its single signature check. It defaults to ``Certificate/Verify/rejectingAll``
+    /// so that a verifier built without a real witness fails closed rather than
+    /// silently accepting unverified chains.
+    public var verify: Certificate.Verify
+
     @inlinable
-    public init(rootCertificates: CertificateStore, @PolicyBuilder policy: () throws -> Policy) rethrows {
+    public init(
+        rootCertificates: CertificateStore,
+        verify: Certificate.Verify = .rejectingAll,
+        @PolicyBuilder policy: () throws -> Policy
+    ) rethrows {
         self.rootCertificates = rootCertificates
+        self.verify = verify
         self.policy = try policy()
     }
 
@@ -198,8 +211,16 @@ public struct Verifier<Policy: VerifierPolicy> {
         }
 
         // We check the signature here: if the signature isn't valid, don't try to apply policy.
+        // The cryptography is the injected witness's; this module only decides what to
+        // verify and what a failure means.
+        let signedCertificate = partialChain.currentTip
         guard
-            nextCertificate.publicKey.isValidSignature(partialChain.currentTip.signature, for: partialChain.currentTip)
+            self.verify.signature(
+                signedCertificate.signatureAlgorithm,
+                nextCertificate.publicKey,
+                signedCertificate.signature,
+                signedCertificate.tbsCertificateBytes
+            )
         else {
             diagnosticCallback?(.issuerHasNotSignedCertificate(nextCertificate, chain: partialChain))
             return true

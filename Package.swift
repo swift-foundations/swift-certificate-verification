@@ -66,6 +66,9 @@ let package = Package(
                 "Certificates",
                 "Certificate Internals",
                 .product(name: "Time Primitive", package: "swift-time-primitives"),
+                // Test-only: binds the Crypto-backed Certificate.Verify witness. The
+                // main target stays Crypto-free; main-target purity governs main targets.
+                .product(name: "Crypto", package: "swift-crypto"),
             ],
             path: "Tests/X509Tests",
             // N5 increment 1 (lead A+B+C ruling): compile the issuance-free verifier-essence
