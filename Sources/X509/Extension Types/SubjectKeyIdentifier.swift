@@ -14,8 +14,6 @@
 
 import ISO_8824
 import ISO_8825
-import Crypto
-import struct Foundation.Data
 
 /// Provides a means of identifying a certificate that contains a particular public key.
 ///
@@ -90,17 +88,9 @@ extension Certificate.Extension {
     }
 }
 
-@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-extension SubjectKeyIdentifier {
-    /// Construct a ``SubjectKeyIdentifier`` by hashing the given `publicKey` with SHA-1 according to RFC 5280 Section 4.2.1.2.
-    /// - Parameter publicKey: the public key which will be hashed
-    @inlinable
-    public init(hash publicKey: Certificate.PublicKey) {
-        // RFC 5280 Section 4.2.1.2. Subject Key Identifier (https://www.rfc-editor.org/rfc/rfc5280#section-4.2.1.2)
-        // The keyIdentifier is composed of the 160-bit SHA-1 hash of the
-        // value of the BIT STRING subjectPublicKey (excluding the tag,
-        // length, and number of unused bits).
-        let hash = Insecure.SHA1.hash(data: publicKey.subjectPublicKeyInfoBytes)
-        self.init(keyIdentifier: .init(hash))
-    }
-}
+// `init(hash publicKey:)` — computing an SKI as the SHA-1 of the SPKI, per RFC 5280
+// §4.2.1.2 — has moved out of this target. It is a *construction* convenience: you
+// compute an SKI to place into a certificate, whereas verification only ever reads
+// one. Keeping it here would drag a hashing capability (and with it Crypto and
+// Foundation) into a type that otherwise needs neither, and charge that cost to every
+// verification-only consumer. It belongs with the swift-certificates-crypto adapter.
