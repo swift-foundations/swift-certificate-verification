@@ -63,8 +63,6 @@ let package = Package(
                 .product(name: "RFC 791", package: "swift-rfc-791"),
                 .product(name: "RFC 4291", package: "swift-rfc-4291"),
                 .product(name: "RFC 3986", package: "swift-rfc-3986"),
-                // TEMPORARY BRIDGE — remove at the witness reshape (see dependencies).
-                .product(name: "Crypto", package: "swift-crypto"),
             ],
             path: "Sources/X509"
         ),
