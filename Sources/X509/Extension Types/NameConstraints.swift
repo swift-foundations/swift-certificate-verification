@@ -14,6 +14,7 @@
 
 import ISO_8824
 import ISO_8825
+import Standard_Library_Extensions
 
 /// Constraints the namespace within which all subject names issued by a given CA must reside.
 ///

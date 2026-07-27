@@ -14,6 +14,7 @@
 
 import ISO_8824
 import ISO_8825
+import Standard_Library_Extensions
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate {

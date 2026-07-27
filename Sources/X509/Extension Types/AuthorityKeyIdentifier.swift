@@ -14,6 +14,7 @@
 
 import ISO_8824
 import ISO_8825
+import Standard_Library_Extensions
 
 /// Provides information about the public key corresponding to the private key that was
 /// used to sign a specific certificate.
