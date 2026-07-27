@@ -1,0 +1,8 @@
+# .github/metadata.yaml
+# Finalized from the generate-metadata.yml draft of 2026-07-27 (metadata/draft-20260727-060907).
+description: "N5 work-in-progress: Institute adaptation of the apple/swift-certificates fork (fork point 24ccdee, 1.18.0). Not the publication tree; canonical swift-certificates name remains vacated for the deliberate publication step."
+topics:
+  - foundations
+  - certificates
+  - x509
+homepage: "https://swift-institute.org"
