@@ -5,7 +5,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-certificates",
+    // Must match the repository/directory name: SwiftPM derives a workspace override's
+    // identity from the directory, and rejects the override when the declared name
+    // disagrees. Declaring "swift-certificates" here made this package unoverridable.
+    name: "swift-certificate-verification",
     platforms: [
         .macOS(.v26),
         .iOS(.v26),
