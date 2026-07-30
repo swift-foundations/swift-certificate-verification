@@ -20,7 +20,7 @@ extension NameConstraintsPolicy {
     /// However, most implementations don't bother, and just directly compare the distinguished
     /// names.
     @inlinable
-    static func directoryNameMatchesConstraint(directoryName: DistinguishedName, constraint: DistinguishedName) -> Bool
+    package static func directoryNameMatchesConstraint(directoryName: DistinguishedName, constraint: DistinguishedName) -> Bool
     {
         return directoryName == constraint
     }

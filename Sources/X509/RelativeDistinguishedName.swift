@@ -57,7 +57,7 @@ public struct RelativeDistinguishedName {
     }
 
     @inlinable
-    init(_ attributes: ISO_8825.DER.LazySetOfSequence<Attribute>) throws(ISO_8824.Error) {
+    package init(_ attributes: ISO_8825.DER.LazySetOfSequence<Attribute>) throws(ISO_8824.Error) {
         // _TinyArray's Result-sequence init is untyped `throws`; the LazySetOfSequence
         // only ever surfaces ISO_8824.Error, so re-throw it unwrapped (preserving detail).
         do {
@@ -174,7 +174,7 @@ extension RelativeDistinguishedName: ISO_8825.DER.ImplicitlyTaggable {
     }
 
     @inlinable
-    static func _sortElements(_ elements: inout _TinyArray<RelativeDistinguishedName.Attribute>) {
+    package static func _sortElements(_ elements: inout _TinyArray<RelativeDistinguishedName.Attribute>) {
         // We keep the elements sorted at all times. This is dumb, but we assume that these objects get
         // mutated infrequently.
         // This is weird. We need to individually serialize each element, then lexicographically compare

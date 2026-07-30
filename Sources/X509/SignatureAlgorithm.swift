@@ -27,7 +27,7 @@ extension Certificate {
         var _algorithmIdentifier: AlgorithmIdentifier
 
         @inlinable
-        init(algorithmIdentifier: AlgorithmIdentifier) {
+        package init(algorithmIdentifier: AlgorithmIdentifier) {
             switch algorithmIdentifier {
             // Per RFC 4055 § 5, we need to accept the RSA parameters field being
             // absent, but we must _produce_ the one with an explicit NULL. So we
@@ -71,7 +71,7 @@ extension Certificate {
 
         /// Whether this algorithm represents an ECDSA signature.
         @inlinable
-        var isECDSA: Bool {
+        package var isECDSA: Bool {
             switch self {
             case .ecdsaWithSHA256, .ecdsaWithSHA384, .ecdsaWithSHA512:
                 return true
@@ -81,7 +81,7 @@ extension Certificate {
         }
 
         @inlinable
-        var isRSA: Bool {
+        package var isRSA: Bool {
             switch self {
             case .sha1WithRSAEncryption, .sha256WithRSAEncryption, .sha384WithRSAEncryption, .sha512WithRSAEncryption:
                 return true
@@ -128,12 +128,12 @@ extension Certificate.SignatureAlgorithm: CustomStringConvertible {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension AlgorithmIdentifier {
     @inlinable
-    init(_ signatureAlgorithm: Certificate.SignatureAlgorithm) {
+    package init(_ signatureAlgorithm: Certificate.SignatureAlgorithm) {
         self = signatureAlgorithm._algorithmIdentifier
     }
 
     @inlinable
-    init(digestAlgorithmFor signatureAlgorithm: Certificate.SignatureAlgorithm) throws(Certificate.Error) {
+    package init(digestAlgorithmFor signatureAlgorithm: Certificate.SignatureAlgorithm) throws(Certificate.Error) {
         // Per RFC 5754 § 2, we must produce digest algorithm identifiers with
         // absent parameters, so we do.
         switch signatureAlgorithm {

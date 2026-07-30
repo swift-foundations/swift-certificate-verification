@@ -40,11 +40,10 @@ import ISO_8825
 @usableFromInline
 typealias UniqueIdentifier = ISO_8824.BitString
 
-@usableFromInline
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
-struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
+package struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ISO_8824.Identifier {
+    package static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -104,7 +103,7 @@ struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         self = try ISO_8825.DER.sequence(rootNode, identifier: identifier) { (nodes: inout ISO_8825.Node.Collection.Iterator) throws(ISO_8824.Error) -> TBSCertificate in
             let version = try ISO_8825.DER.decodeDefaultExplicitlyTagged(
                 &nodes,
@@ -171,7 +170,7 @@ struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     }
 
     @inlinable
-    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             if self.version != .v1 {
                 try coder.serialize(self.version.rawValue, explicitlyTaggedWithTagNumber: 0, tagClass: .contextSpecific)

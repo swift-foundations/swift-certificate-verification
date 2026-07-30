@@ -37,7 +37,7 @@ extension NameConstraintsPolicy {
     ///    component in which the host name is specified as an IP address), then
     ///    the application MUST reject the certificate.
     @inlinable
-    static func uriNameMatchesConstraint(uriName: String, constraint: String) -> Bool {
+    package static func uriNameMatchesConstraint(uriName: String, constraint: String) -> Bool {
         // If we can't parse the URL, the constraint is definitely not satisfied.
         // If there is no authority component then the last rule above applies.
         guard let parsed = try? RFC_3986.URI(uriName), let host = parsed.host else {

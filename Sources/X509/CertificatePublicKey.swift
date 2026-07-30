@@ -30,7 +30,7 @@ extension Certificate {
         var backing: BackingPublicKey
 
         @inlinable
-        internal init(spki: SubjectPublicKeyInfo) throws {
+        package init(spki: SubjectPublicKeyInfo) throws {
             switch spki.algorithmIdentifier {
             case .p256PublicKey:
                 guard spki.key.bytes.count == Certificate.PublicKey.p256X963ByteCount else {
@@ -156,7 +156,7 @@ extension Certificate.PublicKey {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension SubjectPublicKeyInfo {
     @inlinable
-    init(_ publicKey: Certificate.PublicKey) {
+    package init(_ publicKey: Certificate.PublicKey) {
         let algorithmIdentifier: AlgorithmIdentifier
         let key: ISO_8824.BitString
 

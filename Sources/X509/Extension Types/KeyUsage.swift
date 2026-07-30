@@ -250,7 +250,7 @@ public struct KeyUsage {
     }
 
     @inlinable
-    internal static func validateBitString(_ bitstring: ISO_8824.BitString) throws {
+    package static func validateBitString(_ bitstring: ISO_8824.BitString) throws {
         switch bitstring.bytes.count {
         case 0:
             // This is fine, no bits are set.
@@ -340,7 +340,7 @@ extension Certificate.Extension {
 
 extension UInt16 {
     @inlinable
-    init(_ bitString: ISO_8824.BitString) {
+    package init(_ bitString: ISO_8824.BitString) {
         switch bitString.bytes.count {
         case 0:
             self = 0
@@ -357,7 +357,7 @@ extension UInt16 {
 
 extension ISO_8824.BitString {
     @inlinable
-    init(_ ext: KeyUsage) {
+    package init(_ ext: KeyUsage) {
         if ext.decipherOnly {
             // We need two bytes here.
             let bytes = [UInt8(truncatingIfNeeded: ext.rawValue >> 8), UInt8(truncatingIfNeeded: ext.rawValue)]

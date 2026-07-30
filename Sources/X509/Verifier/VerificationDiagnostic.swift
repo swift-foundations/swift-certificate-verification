@@ -349,7 +349,7 @@ extension VerificationDiagnostic.Storage {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Certificate.Extensions {
     @inlinable
-    func unhandledCriticalExtensions(
+    package func unhandledCriticalExtensions(
         for handledCriticalExtensions: [ISO_8824.ObjectIdentifier]
     ) -> some Sequence<Certificate.Extension> {
         self.lazy.filter { ext in

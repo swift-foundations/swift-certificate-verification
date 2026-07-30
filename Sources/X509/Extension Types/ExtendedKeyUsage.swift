@@ -81,7 +81,7 @@ extension Array {
     /// This is more performant compared to hashing if we have less than ~64 usages
     /// - Parameter areEqual: a predicate that returns true if the first and second arguments are considered equal
     /// - Returns: a tuple of the first two indices duplicates found in `self`. `nil` is returned if no duplicates are found.
-    func findDuplicates(
+    package func findDuplicates(
         by areEqual: (Element, Element) -> Bool
     ) -> (first: Index, second: Index)? {
         for index in self.indices {

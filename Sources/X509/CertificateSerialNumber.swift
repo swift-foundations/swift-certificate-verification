@@ -102,7 +102,7 @@ extension Certificate.SerialNumber: ExpressibleByIntegerLiteral {
 
 extension [UInt8] {
     @inlinable
-    mutating func appendBigEndianBytes(_ number: UInt) {
+    package mutating func appendBigEndianBytes(_ number: UInt) {
         let number = number.bigEndian
 
         for byte in 0..<(MemoryLayout<UInt>.size) {

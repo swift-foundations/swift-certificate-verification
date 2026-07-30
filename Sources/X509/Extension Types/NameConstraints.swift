@@ -44,7 +44,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        init(subtrees: [GeneralName]) {
+        package init(subtrees: [GeneralName]) {
             self.subtrees = subtrees
         }
 
@@ -72,7 +72,7 @@ public struct NameConstraints {
             var wrapped: Int
 
             @inlinable
-            init(_ wrapped: Int) {
+            package init(_ wrapped: Int) {
                 self.wrapped = wrapped
             }
         }
@@ -115,7 +115,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        var filtered: some Sequence<GeneralName> {
+        package var filtered: some Sequence<GeneralName> {
             self.subtrees.lazy.filter {
                 guard case .dnsName = $0 else {
                     return false
@@ -140,7 +140,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        init(subtrees: [GeneralName]) {
+        package init(subtrees: [GeneralName]) {
             self.subtrees = subtrees
         }
 
@@ -168,7 +168,7 @@ public struct NameConstraints {
             var wrapped: Int
 
             @inlinable
-            init(_ wrapped: Int) {
+            package init(_ wrapped: Int) {
                 self.wrapped = wrapped
             }
         }
@@ -211,7 +211,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        var filtered: some Sequence<GeneralName> {
+        package var filtered: some Sequence<GeneralName> {
             self.subtrees.lazy.filter {
                 guard case .ipAddress = $0 else {
                     return false
@@ -236,7 +236,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        init(subtrees: [GeneralName]) {
+        package init(subtrees: [GeneralName]) {
             self.subtrees = subtrees
         }
 
@@ -264,7 +264,7 @@ public struct NameConstraints {
             var wrapped: Int
 
             @inlinable
-            init(_ wrapped: Int) {
+            package init(_ wrapped: Int) {
                 self.wrapped = wrapped
             }
         }
@@ -307,7 +307,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        var filtered: some Sequence<GeneralName> {
+        package var filtered: some Sequence<GeneralName> {
             self.subtrees.lazy.filter {
                 guard case .rfc822Name = $0 else {
                     return false
@@ -332,7 +332,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        init(subtrees: [GeneralName]) {
+        package init(subtrees: [GeneralName]) {
             self.subtrees = subtrees
         }
 
@@ -360,7 +360,7 @@ public struct NameConstraints {
             var wrapped: Int
 
             @inlinable
-            init(_ wrapped: Int) {
+            package init(_ wrapped: Int) {
                 self.wrapped = wrapped
             }
         }
@@ -403,7 +403,7 @@ public struct NameConstraints {
         }
 
         @inlinable
-        var filtered: some Sequence<GeneralName> {
+        package var filtered: some Sequence<GeneralName> {
             self.subtrees.lazy.filter {
                 guard case .uniformResourceIdentifier = $0 else {
                     return false
@@ -685,7 +685,7 @@ public struct NameConstraints {
 
 extension Hasher {
     @inlinable
-    mutating func combine(contentsOf elements: some Sequence<some Hashable>) {
+    package mutating func combine(contentsOf elements: some Sequence<some Hashable>) {
         for element in elements {
             self.combine(element)
         }

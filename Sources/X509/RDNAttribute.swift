@@ -378,7 +378,7 @@ extension String {
 
 extension RandomAccessCollection {
     @inlinable
-    func suffix(while predicate: (Element) -> Bool) -> SubSequence {
+    package func suffix(while predicate: (Element) -> Bool) -> SubSequence {
         var index = self.endIndex
         if index == self.startIndex {
             return self[...]

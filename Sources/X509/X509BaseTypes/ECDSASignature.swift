@@ -79,18 +79,18 @@ extension ArraySlice where Element == UInt8 {
     ///
     /// This means we strip leading zero bytes.
     @inlinable
-    init<Bytes: Collection>(normalisingToASN1IntegerForm bigEndianRawInteger: Bytes) where Bytes.Element == UInt8 {
+    package init<Bytes: Collection>(normalisingToASN1IntegerForm bigEndianRawInteger: Bytes) where Bytes.Element == UInt8 {
         let realBytes = bigEndianRawInteger.drop(while: { $0 == 0 })
         self = ArraySlice(realBytes)
     }
 
     @inlinable
-    init(normalisingToASN1IntegerForm bigEndianRawInteger: ArraySlice<UInt8>) {
+    package init(normalisingToASN1IntegerForm bigEndianRawInteger: ArraySlice<UInt8>) {
         self = bigEndianRawInteger.drop(while: { $0 == 0 })
     }
 
     @inlinable
-    init(normalisingToASN1IntegerForm bigEndianRawInteger: [UInt8]) {
+    package init(normalisingToASN1IntegerForm bigEndianRawInteger: [UInt8]) {
         self.init(normalisingToASN1IntegerForm: bigEndianRawInteger[...])
     }
 }

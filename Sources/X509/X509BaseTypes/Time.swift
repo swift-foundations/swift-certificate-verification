@@ -65,12 +65,12 @@ enum Time: ISO_8825.DER.Parseable, ISO_8825.DER.Serializable, Hashable, Sendable
 
 extension Instant {
     @inlinable
-    init(fromUTCDate date: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) {
+    package init(fromUTCDate date: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) {
         self.init(secondsSinceUnixEpoch: Int64(timestampFromUTCDate: date))
     }
 
     @inlinable
-    var utcDate: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int) {
+    package var utcDate: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int) {
         // Certificate validity has whole-second precision; the nanosecond
         // fraction is deliberately dropped.
         self.secondsSinceUnixEpoch.utcDateFromTimestamp
@@ -87,7 +87,7 @@ extension Instant {
     }
 
     @inlinable
-    init(_ time: ISO_8824.GeneralizedTime) {
+    package init(_ time: ISO_8824.GeneralizedTime) {
         self = Instant(
             fromUTCDate: (
                 year: time.year, month: time.month, day: time.day, hours: time.hours, minutes: time.minutes,
@@ -97,7 +97,7 @@ extension Instant {
     }
 
     @inlinable
-    init(_ time: ISO_8824.UTCTime) {
+    package init(_ time: ISO_8824.UTCTime) {
         self = Instant(
             fromUTCDate: (
                 year: time.year, month: time.month, day: time.day, hours: time.hours, minutes: time.minutes,
@@ -128,7 +128,7 @@ extension ISO_8824.GeneralizedTime {
     }
 
     @inlinable
-    init(_ components: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) throws {
+    package init(_ components: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) throws {
         try self.init(
             year: components.year,
             month: components.month,
@@ -141,7 +141,7 @@ extension ISO_8824.GeneralizedTime {
     }
 
     @inlinable
-    init(_ instant: Instant) {
+    package init(_ instant: Instant) {
         // This cannot throw: any valid Instant can be represented.
         try! self.init(instant.utcDate)
     }
@@ -149,7 +149,7 @@ extension ISO_8824.GeneralizedTime {
 
 extension ISO_8824.UTCTime {
     @inlinable
-    init(_ components: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) throws {
+    package init(_ components: (year: Int, month: Int, day: Int, hours: Int, minutes: Int, seconds: Int)) throws {
         try self.init(
             year: components.year,
             month: components.month,

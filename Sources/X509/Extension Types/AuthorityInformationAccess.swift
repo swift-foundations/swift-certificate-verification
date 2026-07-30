@@ -166,7 +166,7 @@ extension AuthorityInformationAccess.AccessDescription {
         }
 
         @inlinable
-        init(_ oid: ISO_8824.ObjectIdentifier) {
+        package init(_ oid: ISO_8824.ObjectIdentifier) {
             switch oid {
             case .AccessMethodIdentifiers.ocspServer:
                 self.backing = .ocspServer

@@ -333,7 +333,7 @@ extension _TinyArray.Storage {
 
 extension Array {
     @inlinable
-    mutating func appendRemainingElements(from iterator: inout some IteratorProtocol<Element>) {
+    package mutating func appendRemainingElements(from iterator: inout some IteratorProtocol<Element>) {
         while let nextElement = iterator.next() {
             append(nextElement)
         }

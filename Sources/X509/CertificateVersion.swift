@@ -24,7 +24,7 @@ extension Certificate {
         var rawValue: Int
 
         @inlinable
-        init(rawValue: Int) {
+        package init(rawValue: Int) {
             self.rawValue = rawValue
         }
 

@@ -162,7 +162,7 @@ extension DistinguishedName: ISO_8825.DER.Parseable {
     }
 
     @inlinable
-    static func derEncoded(
+    package static func derEncoded(
         _ sequenceNodeIterator: inout ISO_8825.Node.Collection.Iterator
     ) throws(ISO_8824.Error) -> DistinguishedName {
         // This is a workaround for the fact that, even though the conformance to ISO_8825.DER.ImplicitlyTaggable is

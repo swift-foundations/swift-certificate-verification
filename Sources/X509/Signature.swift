@@ -135,7 +135,7 @@ extension Certificate.Signature {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension ISO_8824.BitString {
     @inlinable
-    init(_ signature: Certificate.Signature) {
+    package init(_ signature: Certificate.Signature) {
         self.init(bytes: signature.rawRepresentation[...])
     }
 }
@@ -143,7 +143,7 @@ extension ISO_8824.BitString {
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension ISO_8824.OctetString {
     @inlinable
-    init(_ signature: Certificate.Signature) {
+    package init(_ signature: Certificate.Signature) {
         switch signature.backing {
         case .ecdsa(let sig):
             var serializer = ISO_8825.DER.Serializer()

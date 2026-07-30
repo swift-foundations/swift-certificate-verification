@@ -15,10 +15,9 @@
 import ISO_8824
 import ISO_8825
 
-@usableFromInline
-struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
+package struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ISO_8824.Identifier {
+    package static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -29,7 +28,7 @@ struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable
     var key: ISO_8824.BitString
 
     @inlinable
-    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         // The SPKI block looks like this:
         //
         // SubjectPublicKeyInfo  ::=  SEQUENCE  {
@@ -45,19 +44,19 @@ struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable
     }
 
     @inlinable
-    init(algorithmIdentifier: AlgorithmIdentifier, key: ISO_8824.BitString) {
+    package init(algorithmIdentifier: AlgorithmIdentifier, key: ISO_8824.BitString) {
         self.algorithmIdentifier = algorithmIdentifier
         self.key = key
     }
 
     @inlinable
-    internal init(algorithmIdentifier: AlgorithmIdentifier, key: [UInt8]) {
+    package init(algorithmIdentifier: AlgorithmIdentifier, key: [UInt8]) {
         self.algorithmIdentifier = algorithmIdentifier
         self.key = ISO_8824.BitString(bytes: key[...])
     }
 
     @inlinable
-    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.algorithmIdentifier)
             try coder.serialize(self.key)

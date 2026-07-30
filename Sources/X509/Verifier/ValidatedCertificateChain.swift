@@ -60,7 +60,7 @@ public struct ValidatedCertificateChain: Sendable, Collection, RandomAccessColle
     /// - Parameter validatedChain: The validated certificate chain.
     /// - Precondition: The `validatedChain` must contain at least one certificate.
     @inlinable
-    init(_ validatedChain: [Certificate]) {
+    package init(_ validatedChain: [Certificate]) {
         precondition(validatedChain.count > 0, "A valid certificate chain contains at least one certificate.")
         self.validatedChain = validatedChain
     }

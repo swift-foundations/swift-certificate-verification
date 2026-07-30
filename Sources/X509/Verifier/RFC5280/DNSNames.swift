@@ -58,7 +58,7 @@ extension NameConstraintsPolicy {
     /// We have a number of other caveats in play, that will be commented within
     /// the body of the function as we go.
     @inlinable
-    static func dnsNameMatchesConstraint(dnsName: String.UTF8View, constraint: String.UTF8View) -> Bool {
+    package static func dnsNameMatchesConstraint(dnsName: String.UTF8View, constraint: String.UTF8View) -> Bool {
         // Before any validation: confirm that these are both valid DNS names.
         guard dnsName.isValidDNSName(isConstraint: false) && constraint.isValidDNSName(isConstraint: true) else {
             return false
@@ -134,7 +134,7 @@ extension String.UTF8View {
     static let maximumLabelLength = 63
 
     @inlinable
-    func isValidDNSName(isConstraint: Bool) -> Bool {
+    package func isValidDNSName(isConstraint: Bool) -> Bool {
         var bytes = self[...]
         var labelCount = 0
         var isWildcard = false
@@ -283,7 +283,7 @@ extension String.UTF8View.SubSequence {
     static let asciiCaseInsensitiveMask: UInt8 = ~(1 << 5)
 
     @inlinable
-    func caseInsensitiveASCIIMatch(_ other: Self) -> Bool {
+    package func caseInsensitiveASCIIMatch(_ other: Self) -> Bool {
         guard self.count == other.count else {
             return false
         }
@@ -303,7 +303,7 @@ extension String.UTF8View.SubSequence {
     }
 
     @inlinable
-    var labelContents: LabelContents {
+    package var labelContents: LabelContents {
         var nonNumerics = 0
 
         for byte in self {
