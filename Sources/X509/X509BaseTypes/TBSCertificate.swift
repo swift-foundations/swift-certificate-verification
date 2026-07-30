@@ -41,6 +41,7 @@ import ISO_8825
 typealias UniqueIdentifier = ISO_8824.BitString
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
+@usableFromInline
 package struct TBSCertificate: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
     package static var defaultIdentifier: ISO_8824.Identifier {
