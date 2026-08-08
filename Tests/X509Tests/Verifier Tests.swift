@@ -20,15 +20,24 @@ import Foundation
 import Testing
 import ISO_8824
 import ISO_8825
+import Time_Primitive
 @testable import Certificates
 @preconcurrency import Crypto
 
-@available(macOS 11.0, iOS 14, tvOS 14, watchOS 7, macCatalyst 14, visionOS 1.0, *)
+// TX-N1E: two arbitrary, distinguishable OIDs for a diagnostic-formatting test that only
+// needs "some unhandled critical extension" values, not any particular semantics. The
+// well-known PKCS#7/CMS content-type OIDs are as good a pair as any and self-document
+// better than digits picked at random. Test-target-only.
+extension ISO_8824.ObjectIdentifier {
+    fileprivate static let cmsData: ISO_8824.ObjectIdentifier = [1, 2, 840, 113549, 1, 7, 1]
+    fileprivate static let cmsSignedData: ISO_8824.ObjectIdentifier = [1, 2, 840, 113549, 1, 7, 2]
+}
+
 @Suite struct `Verifier Tests` {
     @Suite struct Unit {}
     @Suite struct `Edge Case` {}
     @Suite struct Integration {
-        private static let referenceTime = Date()
+        private static let referenceTime = TestPKI.startDate
 
         private static let ca1PrivateKey = P384.Signing.PrivateKey()
         private static let ca1Name = try! DistinguishedName {
@@ -37,16 +46,16 @@ import ISO_8825
             CommonName("Swift Certificate Test CA 1")
         }
         private static let ca1: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(3650),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(3650 * 86400),
                 issuer: ca1Name,
                 subject: ca1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -59,16 +68,16 @@ import ISO_8825
             )
         }()
         private static let ca1WithoutSubjectKeyIdentifier: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(3650),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(3650 * 86400),
                 issuer: ca1Name,
                 subject: ca1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -78,16 +87,16 @@ import ISO_8825
             )
         }()
         private static let ca1CrossSignedByCA2: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(365 * 86400),
                 issuer: ca2Name,
                 subject: ca1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -102,16 +111,16 @@ import ISO_8825
         }()
         private static let ca1AlternativePrivateKey = P384.Signing.PrivateKey()
         private static let ca1WithAlternativePrivateKey: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca1AlternativePrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(3650),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(3650 * 86400),
                 issuer: ca1Name,
                 subject: ca1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -133,16 +142,16 @@ import ISO_8825
             CommonName("Swift Certificate Test CA 2")
         }
         private static let ca2: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca2PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(3650),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(3650 * 86400),
                 issuer: ca2Name,
                 subject: ca2Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -155,16 +164,16 @@ import ISO_8825
             )
         }()
         private static let ca2CrossSignedByCA1: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(ca2PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(365 * 86400),
                 issuer: ca1Name,
                 subject: ca2Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -185,16 +194,16 @@ import ISO_8825
             CommonName("Swift Certificate Test Intermediate CA 1")
         }
         private static let intermediate1: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(intermediate1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: ca1.subject,
                 subject: intermediate1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: 1)
                     )
@@ -210,16 +219,16 @@ import ISO_8825
             )
         }()
         private static let intermediate1WithoutSKIAKI: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(intermediate1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: ca1.subject,
                 subject: intermediate1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: 1)
                     )
@@ -229,16 +238,16 @@ import ISO_8825
             )
         }()
         private static let intermediate1WithIncorrectSKIAKI: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(intermediate1PrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: ca1.subject,
                 subject: intermediate1Name,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: 1)
                     )
@@ -260,16 +269,16 @@ import ISO_8825
                 CommonName("localhost")
             }
 
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(localhostLeafPrivateKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(365 * 86400),
                 issuer: intermediate1.subject,
                 subject: localhostLeafName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.notCertificateAuthority
                     )
@@ -288,16 +297,16 @@ import ISO_8825
                 CommonName("Isolated Self-Signed Cert")
             }
 
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(isolatedSelfSignedCertKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(365 * 86400),
                 issuer: isolatedSelfSignedCertName,
                 subject: isolatedSelfSignedCertName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -314,16 +323,16 @@ import ISO_8825
                 CommonName("Isolated Self-Signed Cert")
             }
 
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(isolatedSelfSignedCertKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(365 * 86400),
                 issuer: isolatedSelfSignedCertName,
                 subject: isolatedSelfSignedCertName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -411,16 +420,16 @@ import ISO_8825
         }
 
         private static let t1: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(t1t2Key.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: ca1.subject,
                 subject: tName,
                 signatureAlgorithm: .ecdsaWithSHA384,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -437,16 +446,16 @@ import ISO_8825
             )
         }()
         private static let t2: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(t1t2Key.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: xName,
                 subject: tName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -456,16 +465,16 @@ import ISO_8825
             )
         }()
         private static let t3: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(t3Key.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: xName,
                 subject: tName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: 1)
                     )
@@ -478,16 +487,16 @@ import ISO_8825
             )
         }()
         private static let x1: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(xKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: tName,
                 subject: xName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -500,16 +509,16 @@ import ISO_8825
             )
         }()
         private static let x2: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(xKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: tName,
                 subject: xName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.isCertificateAuthority(maxPathLength: nil)
                     )
@@ -523,16 +532,16 @@ import ISO_8825
             )
         }()
         private static let insaneLeaf: Certificate = {
-            return try! Certificate(
+            return try! Certificate.Issuance.issue(
                 version: .v3,
-                serialNumber: .init(),
+                serialNumber: TestPKI.nextSerialNumber(),
                 publicKey: .init(insaneLeafKey.publicKey),
-                notValidBefore: referenceTime - .days(365),
-                notValidAfter: referenceTime + .days(5 * 365),
+                notValidBefore: referenceTime - .seconds(365 * 86400),
+                notValidAfter: referenceTime + .seconds(5 * 365 * 86400),
                 issuer: tName,
                 subject: leafName,
                 signatureAlgorithm: .ecdsaWithSHA256,
-                extensions: Certificate.Extensions {
+                extensions: try! Certificate.Extensions {
                     Critical(
                         BasicConstraints.notCertificateAuthority
                     )
@@ -545,12 +554,11 @@ import ISO_8825
         }()
 
         @PolicyBuilder private static var defaultPolicy: some VerifierPolicy {
-            RFC5280Policy()
+            RFC5280Policy(validationTime: Self.referenceTime)
         }
     }
 }
 
-@available(macOS 11.0, iOS 14, tvOS 14, watchOS 7, macCatalyst 14, visionOS 1.0, *)
 extension `Verifier Tests`.Integration {
 
     @Test
@@ -558,7 +566,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -594,7 +602,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1WithoutSubjectKeyIdentifier, Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -630,7 +638,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore(),
@@ -657,7 +665,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore()
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -688,7 +696,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -723,7 +731,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1, Self.ca1, Self.ca2]),
@@ -758,7 +766,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1, Self.ca1CrossSignedByCA2]),
@@ -801,7 +809,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1, Self.ca2CrossSignedByCA1, Self.ca1CrossSignedByCA2]),
@@ -836,7 +844,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1, Self.intermediate1WithoutSKIAKI]),
@@ -871,7 +879,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1WithIncorrectSKIAKI, Self.intermediate1WithoutSKIAKI]),
@@ -906,7 +914,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1WithAlternativePrivateKey, Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.ca1CrossSignedByCA2, Self.ca2CrossSignedByCA1, Self.intermediate1]),
@@ -956,7 +964,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.ca2])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) {
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) {
             FailIfCertInChainPolicy(forbiddenCert: Self.ca1)
             Self.defaultPolicy
         }
@@ -1011,7 +1019,7 @@ extension `Verifier Tests`.Integration {
         let intermediates = CertificateStore([Self.t1, Self.t2, Self.t3, Self.x2, Self.x1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.insaneLeaf,
             intermediates: intermediates,
@@ -1073,7 +1081,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.isolatedSelfSignedCert,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -1098,7 +1106,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.isolatedSelfSignedCert])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.isolatedSelfSignedCert,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -1132,7 +1140,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.localhostLeaf])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { IgnoreBasicConstraintsPolicy() }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { IgnoreBasicConstraintsPolicy() }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -1157,7 +1165,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.intermediate1])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.localhostLeaf,
             intermediates: CertificateStore([Self.intermediate1]),
@@ -1184,7 +1192,7 @@ extension `Verifier Tests`.Integration {
         let roots = CertificateStore([Self.ca1, Self.isolatedSelfSignedCertWithWeirdCriticalExtension])
         let log = DiagnosticsLog()
 
-        var verifier = Verifier(rootCertificates: roots) { Self.defaultPolicy }
+        var verifier = Verifier(rootCertificates: roots, verify: .crypto) { Self.defaultPolicy }
         let result = await verifier.validate(
             leaf: Self.isolatedSelfSignedCertWithWeirdCriticalExtension,
             intermediates: CertificateStore([Self.intermediate1]),

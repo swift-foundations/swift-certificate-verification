@@ -15,6 +15,7 @@
 import ISO_8824
 import ISO_8825
 
+@usableFromInline
 package struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
     package static var defaultIdentifier: ISO_8824.Identifier {
@@ -52,7 +53,11 @@ package struct SubjectPublicKeyInfo: ISO_8825.DER.ImplicitlyTaggable, Hashable, 
     @inlinable
     package init(algorithmIdentifier: AlgorithmIdentifier, key: [UInt8]) {
         self.algorithmIdentifier = algorithmIdentifier
-        self.key = ISO_8824.BitString(bytes: key[...])
+        // paddingBits defaults to 0, which `_validate()` can never reject (see
+        // ISO_8824.BitString._validate(): the only failure modes require a nonzero,
+        // out-of-range, or byte-content-inconsistent padding count) — safe to force-try
+        // rather than widen this initializer's signature with `throws`.
+        self.key = try! ISO_8824.BitString(bytes: key[...])
     }
 
     @inlinable

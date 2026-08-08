@@ -296,8 +296,10 @@ extension String.UTF8View.SubSequence {
         )
     }
 
+    // TX-N1E: raised from `internal` to `package`, same class as the AlgorithmIdentifier
+    // fix — `labelContents` below is `package` and its type must be at least as visible.
     @usableFromInline
-    enum LabelContents: Sendable {
+    package enum LabelContents: Sendable {
         case allASCII(nonNumerics: Int)
         case nonASCII
     }

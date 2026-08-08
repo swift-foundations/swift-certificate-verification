@@ -136,7 +136,9 @@ extension Certificate.Signature {
 extension ISO_8824.BitString {
     @inlinable
     package init(_ signature: Certificate.Signature) {
-        self.init(bytes: signature.rawRepresentation[...])
+        // paddingBits defaults to 0, which `_validate()` can never reject — see the
+        // identical note on SubjectPublicKeyInfo's [UInt8] init.
+        self = try! ISO_8824.BitString(bytes: signature.rawRepresentation[...])
     }
 }
 

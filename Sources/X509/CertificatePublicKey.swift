@@ -160,19 +160,21 @@ extension SubjectPublicKeyInfo {
         let algorithmIdentifier: AlgorithmIdentifier
         let key: ISO_8824.BitString
 
+        // paddingBits defaults to 0 at every call site below, which `_validate()` can
+        // never reject — see the identical note on SubjectPublicKeyInfo's [UInt8] init.
         switch publicKey.backing {
         case .p256(let bytes):
             algorithmIdentifier = .p256PublicKey
-            key = .init(bytes: bytes[...])
+            key = try! .init(bytes: bytes[...])
         case .p384(let bytes):
             algorithmIdentifier = .p384PublicKey
-            key = .init(bytes: bytes[...])
+            key = try! .init(bytes: bytes[...])
         case .p521(let bytes):
             algorithmIdentifier = .p521PublicKey
-            key = .init(bytes: bytes[...])
+            key = try! .init(bytes: bytes[...])
         case .ed25519(let bytes):
             algorithmIdentifier = .ed25519
-            key = .init(bytes: bytes[...])
+            key = try! .init(bytes: bytes[...])
         }
 
         self.algorithmIdentifier = algorithmIdentifier
