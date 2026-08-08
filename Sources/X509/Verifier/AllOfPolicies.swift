@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 import ISO_8824
 import ISO_8825
@@ -35,29 +35,30 @@ import ISO_8825
 /// ```
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct AllOfPolicies<Policy: VerifierPolicy>: VerifierPolicy {
-    @usableFromInline
-    var policy: Policy
+  @usableFromInline
+  var policy: Policy
 
-    @inlinable
-    public init(@PolicyBuilder policy: () throws -> Policy) throws {
-        self.policy = try policy()
-    }
+  @inlinable
+  public init(@PolicyBuilder policy: () throws -> Policy) throws {
+    self.policy = try policy()
+  }
 
-    @inlinable
-    public init(@PolicyBuilder policy: () -> Policy) {
-        self.policy = policy()
-    }
+  @inlinable
+  public init(@PolicyBuilder policy: () -> Policy) {
+    self.policy = policy()
+  }
 
-    @inlinable
-    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
-        self.policy.verifyingCriticalExtensions
-    }
+  @inlinable
+  public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
+    self.policy.verifyingCriticalExtensions
+  }
 
-    @inlinable
-    public mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult
-    {
-        await self.policy.chainMeetsPolicyRequirements(chain: chain)
-    }
+  @inlinable
+  public mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async
+    -> PolicyEvaluationResult
+  {
+    await self.policy.chainMeetsPolicyRequirements(chain: chain)
+  }
 }
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)

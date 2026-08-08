@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,17 +10,18 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
-import Testing
+@_spi(Testing) import Certificates
 import ISO_8824
 import ISO_8825
-@_spi(Testing) import Certificates
+import Testing
+
+#if canImport(FoundationEssentials)
+  import FoundationEssentials
+#else
+  import Foundation
+#endif
 
 // These certificates are bound from the frozen DER corpus rather than issued in-test
 // (issuance is an excluded surface in slice 1). Each was frozen to match the original
@@ -54,551 +55,552 @@ private let noCNCert = try! Fixture.certificate("leaf-no-cn")
 private let unicodeCNCert = try! Fixture.certificate("leaf-unicode-cn")
 
 extension ServerIdentityPolicy {
-    @Suite
-    struct Test {
-        @Suite struct Unit {}
-        @Suite struct `Edge Case` {}
-    }
+  @Suite
+  struct Test {
+    @Suite struct Unit {}
+    @Suite struct `Edge Case` {}
+  }
 }
 
 extension ServerIdentityPolicy.Test.Unit {
-    @Test
-    func `can validate hostname in first san`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `can validate hostname in first san`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `can validate hostname in second san`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `can validate hostname in second san`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `lowercases hostname for san`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `lowercases hostname for san`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects incorrect hostname`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects incorrect hostname`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts ipv4 address`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.1")
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts ipv4 address`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.1")
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts ipv6 address`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::1")
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts ipv6 address`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::1")
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects incorrect ipv4 address`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.2")
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects incorrect ipv4 address`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: nil, serverIP: "192.168.0.2")
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects incorrect ipv6 address`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::2")
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects incorrect ipv6 address`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: nil, serverIP: "2001:db8::2")
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `falls back to common name`() async throws {
-        let roots = CertificateStore([multiCNCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiCNCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `falls back to common name`() async throws {
+    let roots = CertificateStore([multiCNCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiCNCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `lowercases for common name`() async throws {
-        let roots = CertificateStore([multiCNCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiCNCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `lowercases for common name`() async throws {
+    let roots = CertificateStore([multiCNCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "LoCaLhOsT", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiCNCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `handles missing common name`() async throws {
-        let roots = CertificateStore([noCNCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: noCNCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `handles missing common name`() async throws {
+    let roots = CertificateStore([noCNCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "localhost", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: noCNCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `does not fall back to cn with sans`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `does not fall back to cn with sans`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "httpbin.org", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 }
 
 extension ServerIdentityPolicy.Test.`Edge Case` {
-    @Test
-    func `ignores trailing period`() async throws {
-        let roots = CertificateStore([multiSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "example.com.", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: multiSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `ignores trailing period`() async throws {
+    let roots = CertificateStore([multiSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "example.com.", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: multiSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts wildcards`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "this.wildcard.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts wildcards`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "this.wildcard.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts suffix wildcard`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "foo.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts suffix wildcard`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "foo.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts prefix wildcard`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "bar.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts prefix wildcard`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "bar.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `accepts infix wildcard`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "baz.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `accepts infix wildcard`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "baz.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `ignores trailing period in cert`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "trailing.period.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `ignores trailing period in cert`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "trailing.period.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects encoded idna label`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "straße.unicode.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects encoded idna label`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "straße.unicode.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `matches unencoded idna label`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "xn--strae-oqa.unicode.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `matches unencoded idna label`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "xn--strae-oqa.unicode.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `does not match idna label with wildcard`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "xn--xx-gia.unicode.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `does not match idna label with wildcard`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "xn--xx-gia.unicode.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `does not match non leftmost wildcards`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "weirdwildcard.nomatch.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `does not match non leftmost wildcards`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "weirdwildcard.nomatch.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `does not match multiple wildcards`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "one.two.double.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `does not match multiple wildcards`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "one.two.double.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects wildcard before unencoded idna label`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "foo.straße.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects wildcard before unencoded idna label`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "foo.straße.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `matches wildcard before encoded idna label`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "foo.xn--strae-oqa.example.com", serverIP: nil)
-            }
-        )
-        await assertValidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `matches wildcard before encoded idna label`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "foo.xn--strae-oqa.example.com", serverIP: nil)
+      }
+    )
+    await assertValidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `does not match san with embedded null`() async throws {
-        let roots = CertificateStore([weirdoSANCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "nul\u{0000}l.example.com", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: weirdoSANCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `does not match san with embedded null`() async throws {
+    let roots = CertificateStore([weirdoSANCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "nul\u{0000}l.example.com", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: weirdoSANCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects unicode common name with unencoded idna label`() async throws {
-        let roots = CertificateStore([unicodeCNCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "straße.org", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: unicodeCNCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects unicode common name with unencoded idna label`() async throws {
+    let roots = CertificateStore([unicodeCNCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "straße.org", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: unicodeCNCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 
-    @Test
-    func `rejects unicode common name with encoded idna label`() async throws {
-        let roots = CertificateStore([unicodeCNCert])
-        var verifier = Verifier(
-            rootCertificates: roots,
-            verify: .crypto,
-            policy: {
-                ServerIdentityPolicy(serverHostname: "xn--strae-oqa.org", serverIP: nil)
-            }
-        )
-        await assertInvalidCertificate(
-            await verifier.validate(
-                leaf: unicodeCNCert,
-                intermediates: CertificateStore()
-            )
-        )
-    }
+  @Test
+  func `rejects unicode common name with encoded idna label`() async throws {
+    let roots = CertificateStore([unicodeCNCert])
+    var verifier = Verifier(
+      rootCertificates: roots,
+      verify: .crypto,
+      policy: {
+        ServerIdentityPolicy(serverHostname: "xn--strae-oqa.org", serverIP: nil)
+      }
+    )
+    await assertInvalidCertificate(
+      await verifier.validate(
+        leaf: unicodeCNCert,
+        intermediates: CertificateStore()
+      )
+    )
+  }
 }
 
 extension ISO_8824.OctetString {
-    fileprivate init(ipv4Address: String) {
-        let bytes = ServerIdentityPolicy.parsingIPv4Address(ipv4Address)!
-        let byteArray = Swift.withUnsafeBytes(of: bytes) { Array($0) }
-        self.init(contentBytes: byteArray[...])
-    }
+  fileprivate init(ipv4Address: String) {
+    let bytes = ServerIdentityPolicy.parsingIPv4Address(ipv4Address)!
+    let byteArray = Swift.withUnsafeBytes(of: bytes) { Array($0) }
+    self.init(contentBytes: byteArray[...])
+  }
 
-    fileprivate init(ipv6Address: String) {
-        let bytes = ServerIdentityPolicy.parsingIPv6Address(ipv6Address)!
-        let byteArray = Swift.withUnsafeBytes(of: bytes) { Array($0) }
-        self.init(contentBytes: byteArray[...])
-    }
+  fileprivate init(ipv6Address: String) {
+    let bytes = ServerIdentityPolicy.parsingIPv6Address(ipv6Address)!
+    let byteArray = Swift.withUnsafeBytes(of: bytes) { Array($0) }
+    self.init(contentBytes: byteArray[...])
+  }
 }
 
 private func assertValidCertificate(
-    _ verifier: @autoclosure () async throws -> CertificateValidationResult,
-    sourceLocation: SourceLocation = #_sourceLocation
+  _ verifier: @autoclosure () async throws -> CertificateValidationResult,
+  sourceLocation: SourceLocation = #_sourceLocation
 ) async rethrows {
-    let result = try await verifier()
-    if case .couldNotValidate(let reason) = result {
-        Issue.record("Could not validate certificate, reason: \(reason)", sourceLocation: sourceLocation)
-    }
+  let result = try await verifier()
+  if case .couldNotValidate(let reason) = result {
+    Issue.record(
+      "Could not validate certificate, reason: \(reason)", sourceLocation: sourceLocation)
+  }
 }
 
 private func assertInvalidCertificate(
-    _ verifier: @autoclosure () async throws -> CertificateValidationResult,
-    sourceLocation: SourceLocation = #_sourceLocation
+  _ verifier: @autoclosure () async throws -> CertificateValidationResult,
+  sourceLocation: SourceLocation = #_sourceLocation
 ) async rethrows {
-    let result = try await verifier()
-    if case .validCertificate = result {
-        Issue.record("Incorrectly validated certificate", sourceLocation: sourceLocation)
-    }
+  let result = try await verifier()
+  if case .validCertificate = result {
+    Issue.record("Incorrectly validated certificate", sourceLocation: sourceLocation)
+  }
 }
