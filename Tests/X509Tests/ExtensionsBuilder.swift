@@ -70,7 +70,7 @@ public struct ExtensionsBuilder: Sendable {
   @inlinable
   public static func buildExpression<Extension: CertificateExtensionConvertible>(
     _ expression: Extension
-  ) -> Result<Certificate.Extensions, any Error> {
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     Result {
       try Certificate.Extensions([expression.makeCertificateExtension()])
     }
@@ -79,24 +79,24 @@ public struct ExtensionsBuilder: Sendable {
   @inlinable
   public static func buildExpression(
     _ expression: Certificate.Extensions
-  ) -> Result<Certificate.Extensions, any Error> {
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     .success(expression)
   }
 
   @inlinable
-  public static func buildExpression() -> Result<Certificate.Extensions, any Error> {
+  public static func buildExpression() -> Result<Certificate.Extensions, any Swift.Error> {
     .success(Certificate.Extensions())
   }
 
   @inlinable
-  public static func buildBlock() -> Result<Certificate.Extensions, any Error> {
+  public static func buildBlock() -> Result<Certificate.Extensions, any Swift.Error> {
     .success(Certificate.Extensions())
   }
 
   @inlinable
   public static func buildBlock(
-    _ components: Result<Certificate.Extensions, any Error>...
-  ) -> Result<Certificate.Extensions, any Error> {
+    _ components: Result<Certificate.Extensions, any Swift.Error>...
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     Result {
       try Certificate.Extensions(try components.lazy.flatMap { try $0.get() })
     }
@@ -104,29 +104,29 @@ public struct ExtensionsBuilder: Sendable {
 
   @inlinable
   public static func buildOptional(
-    _ component: Result<Certificate.Extensions, any Error>?
-  ) -> Result<Certificate.Extensions, any Error> {
+    _ component: Result<Certificate.Extensions, any Swift.Error>?
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     component ?? .success(Certificate.Extensions())
   }
 
   @inlinable
   public static func buildEither(
-    first component: Result<Certificate.Extensions, any Error>
-  ) -> Result<Certificate.Extensions, any Error> {
+    first component: Result<Certificate.Extensions, any Swift.Error>
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     component
   }
 
   @inlinable
   public static func buildEither(
-    second component: Result<Certificate.Extensions, any Error>
-  ) -> Result<Certificate.Extensions, any Error> {
+    second component: Result<Certificate.Extensions, any Swift.Error>
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     component
   }
 
   @inlinable
   public static func buildArray(
-    _ components: [Result<Certificate.Extensions, any Error>]
-  ) -> Result<Certificate.Extensions, any Error> {
+    _ components: [Result<Certificate.Extensions, any Swift.Error>]
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     Result {
       try Certificate.Extensions(try components.lazy.flatMap { try $0.get() })
     }
@@ -134,8 +134,8 @@ public struct ExtensionsBuilder: Sendable {
 
   @inlinable
   public static func buildLimitedAvailability(
-    _ component: Result<Certificate.Extensions, any Error>
-  ) -> Result<Certificate.Extensions, any Error> {
+    _ component: Result<Certificate.Extensions, any Swift.Error>
+  ) -> Result<Certificate.Extensions, any Swift.Error> {
     component
   }
 }
