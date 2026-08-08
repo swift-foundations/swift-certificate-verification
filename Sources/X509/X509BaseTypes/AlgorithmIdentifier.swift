@@ -16,10 +16,19 @@ import ISO_8824
 import ISO_8825
 import Standard_Library_Extensions
 
+// TX-N1E: raised from `internal` to `package` — a `package`-access initializer
+// (Certificate.init(tbsCertificate:signatureAlgorithm:...)) takes this type as a
+// parameter, and a `package` declaration's signature must be built entirely from types at
+// least as visible as `package` (an `@usableFromInline` `internal` type satisfies
+// same-module `@inlinable` access, but not package-level cross-file API visibility). Same
+// class of access-level defect as the TBSCertificate / SubjectPublicKeyInfo fixes; this is
+// the third occurrence, all pre-existing and surfaced only once the dependency-side
+// (swift-iso-8825/8824) throwing-initializer changes forced other call sites to be
+// re-verified.
 @usableFromInline
-struct AlgorithmIdentifier: ISO_8825.DER.ImplicitlyTaggable, ISO_8825.BER.ImplicitlyTaggable, Hashable, Sendable {
+package struct AlgorithmIdentifier: ISO_8825.DER.ImplicitlyTaggable, ISO_8825.BER.ImplicitlyTaggable, Hashable, Sendable {
     @inlinable
-    static var defaultIdentifier: ISO_8824.Identifier {
+    package static var defaultIdentifier: ISO_8824.Identifier {
         .sequence
     }
 
@@ -30,13 +39,13 @@ struct AlgorithmIdentifier: ISO_8825.DER.ImplicitlyTaggable, ISO_8825.BER.Implic
     var parameters: ISO_8825.`Any`?
 
     @inlinable
-    init(algorithm: ISO_8824.ObjectIdentifier, parameters: ISO_8825.`Any`?) {
+    package init(algorithm: ISO_8824.ObjectIdentifier, parameters: ISO_8825.`Any`?) {
         self.algorithm = algorithm
         self.parameters = parameters
     }
 
     @inlinable
-    init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package init(derEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         // The AlgorithmIdentifier block looks like this.
         //
         // AlgorithmIdentifier  ::=  SEQUENCE  {
@@ -53,12 +62,12 @@ struct AlgorithmIdentifier: ISO_8825.DER.ImplicitlyTaggable, ISO_8825.BER.Implic
     }
 
     @inlinable
-    init(berEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package init(berEncoded rootNode: ISO_8825.Node, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         self = try .init(derEncoded: rootNode, withIdentifier: identifier)
     }
 
     @inlinable
-    func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
+    package func serialize(into coder: inout ISO_8825.DER.Serializer, withIdentifier identifier: ISO_8824.Identifier) throws(ISO_8824.Error) {
         try coder.appendConstructedNode(identifier: identifier) { (coder: inout ISO_8825.DER.Serializer) throws(ISO_8824.Error) -> Void in
             try coder.serialize(self.algorithm)
             if let parameters = self.parameters {
@@ -219,7 +228,7 @@ extension AlgorithmIdentifier {
 
 extension AlgorithmIdentifier: CustomStringConvertible {
     @usableFromInline
-    var description: String {
+    package var description: String {
         switch self {
         case .p256PublicKey:
             return "p256PublicKey"

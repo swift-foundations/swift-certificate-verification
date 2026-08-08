@@ -140,6 +140,21 @@ public struct ExtensionsBuilder: Sendable {
     }
 }
 
+// TX-N1E (component 6): the entry-point init this DSL is built around —
+// `Certificate.Extensions { … }` — was never restored to this fork alongside the DSL
+// itself, for the same reason `DistinguishedName { … }` wasn't: it depends on a
+// test-target-only builder type. Verbatim lift of
+// `Sources/X509/Extensions.swift`'s `Certificate.Extensions.init(@ExtensionsBuilder:)` at
+// fork-point 24ccdee. The exercisers are the excluded RFC5280Policy / Verifier /
+// CertificateStore suites (TestPKI — component 6) this entry point exists to unblock.
+@available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
+extension Certificate.Extensions {
+    @inlinable
+    public init(@ExtensionsBuilder builder: () throws -> Result<Certificate.Extensions, any Error>) throws {
+        self = try builder().get()
+    }
+}
+
 /// Conforming types are capable of being erased into ``Certificate/Extension`` values.
 ///
 /// Note that for most extension types, the returned ``Certificate/Extension`` should have its
@@ -176,3 +191,60 @@ public struct Critical<BaseExtension: CertificateExtensionConvertible>: Certific
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 extension Critical: Sendable where BaseExtension: Sendable {}
+
+// TX-N1E (component 6): the DSL above compiled but was inert — no main-target extension
+// type conformed to `CertificateExtensionConvertible`, as the file-level note above
+// recorded. These six conformances are the missing link: each main-target extension type
+// already carries a `Certificate.Extension(_:critical:)` round-trip initializer (used by
+// the reverse direction, decoding an extension back into its typed model), so building the
+// forward direction is exactly `try .init(self, critical: false)` — a verbatim lift of the
+// upstream conformances at fork-point 24ccdee, unchanged. Parked here rather than in the
+// main target for the same reason the DSL itself is parked here: construction, not
+// verification, and the main target's policies only ever read these types, never build
+// them. The exercisers are the excluded RFC5280Policy / Verifier / CertificateStore suites
+// this conformance set exists to unblock.
+extension BasicConstraints: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+extension SubjectAlternativeNames: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+extension KeyUsage: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+extension NameConstraints: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+extension AuthorityKeyIdentifier: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+extension SubjectKeyIdentifier: CertificateExtensionConvertible {
+    public func makeCertificateExtension() throws -> Certificate.Extension {
+        try .init(self, critical: false)
+    }
+}
+
+// A raw, already-erased Certificate.Extension is trivially convertible to itself — this is
+// what lets a hand-built malformed extension (see `brokenBasicConstraints` and friends)
+// drop directly into the `Certificate.Extensions { ... }` DSL, and what `Critical(...)`
+// wrapping one of those needs to typecheck.
+extension Certificate.Extension: CertificateExtensionConvertible {
+    public func makeCertificateExtension() -> Certificate.Extension {
+        self
+    }
+}

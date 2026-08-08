@@ -232,8 +232,10 @@ extension Certificate {
         }
     }
 
+    // TX-N1E: raised from `internal` to `package`, same class as the AlgorithmIdentifier
+    // fix — `names` above is `package` and its type must be at least as visible.
     @usableFromInline
-    struct NameSequence: Sequence, Sendable {
+    package struct NameSequence: Sequence, Sendable {
         @usableFromInline
         var subject: DistinguishedName
 
@@ -241,18 +243,20 @@ extension Certificate {
         var alternativeNames: SubjectAlternativeNames
 
         @inlinable
-        init(_ certificate: Certificate) throws {
+        package init(_ certificate: Certificate) throws {
             self.subject = certificate.subject
             self.alternativeNames = try certificate.extensions.subjectAlternativeNames ?? .init()
         }
 
         @inlinable
-        func makeIterator() -> Iterator {
+        package func makeIterator() -> Iterator {
             return Iterator(self.subject, self.alternativeNames)
         }
 
+        // Same access-level cascade as `NameSequence` itself: `Sequence.makeIterator()` is
+        // now `package`, so its return type must be too.
         @usableFromInline
-        struct Iterator: IteratorProtocol, Sendable {
+        package struct Iterator: IteratorProtocol, Sendable {
             @usableFromInline
             var subject: DistinguishedName?
 
@@ -260,13 +264,13 @@ extension Certificate {
             var alternativeNames: SubjectAlternativeNames.SubSequence
 
             @inlinable
-            init(_ subject: DistinguishedName, _ alternativeNames: SubjectAlternativeNames) {
+            package init(_ subject: DistinguishedName, _ alternativeNames: SubjectAlternativeNames) {
                 self.subject = subject
                 self.alternativeNames = alternativeNames[...]
             }
 
             @inlinable
-            mutating func next() -> GeneralName? {
+            package mutating func next() -> GeneralName? {
                 guard let subject = self.subject else {
                     return self.alternativeNames.popFirst()
                 }

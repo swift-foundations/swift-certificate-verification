@@ -118,3 +118,19 @@ public struct DistinguishedNameBuilder: Sendable {
 public protocol RelativeDistinguishedNameConvertible {
     func makeRDN() throws -> RelativeDistinguishedName
 }
+
+// TX-N1E (component 6): the file-level note above records that the `DistinguishedName {
+// … }` DSL entry-point init was deliberately NOT restored when this file was lifted, so the
+// builder type above compiled but had nothing to build into. This is that entry point — a
+// verbatim lift of `Sources/X509/DistinguishedNameBuilder/DNBuilder.swift`'s
+// `DistinguishedName.init(@DistinguishedNameBuilder:)` at fork-point 24ccdee, parked here
+// for the same reason the rest of this file is parked here: it depends on
+// `DistinguishedNameBuilder`, which is itself test-target-only. The exercisers are the
+// excluded RFC5280Policy / Verifier / CertificateStore suites (TestPKI — component 6) this
+// entry point exists to unblock.
+extension DistinguishedName {
+    @inlinable
+    public init(@DistinguishedNameBuilder builder: () throws -> Result<DistinguishedName, any Error>) throws {
+        self = try builder().get()
+    }
+}

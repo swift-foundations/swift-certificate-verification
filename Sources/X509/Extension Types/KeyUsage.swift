@@ -358,14 +358,18 @@ extension UInt16 {
 extension ISO_8824.BitString {
     @inlinable
     package init(_ ext: KeyUsage) {
+        // Both branches construct a paddingBits value consistent with the trailing byte's
+        // low bits by hand (7 for the two-bit-wide decipherOnly flag; the exact trailing
+        // zero count of the single-byte case otherwise), so `_validate()` cannot reject
+        // either — safe to force-try.
         if ext.decipherOnly {
             // We need two bytes here.
             let bytes = [UInt8(truncatingIfNeeded: ext.rawValue >> 8), UInt8(truncatingIfNeeded: ext.rawValue)]
-            self = .init(bytes: bytes[...], paddingBits: 7)
+            self = try! .init(bytes: bytes[...], paddingBits: 7)
         } else {
             // We only need one byte here.
             let byte = UInt8(truncatingIfNeeded: ext.rawValue >> 8)
-            self = .init(bytes: [byte], paddingBits: byte.trailingZeroBitCount)
+            self = try! .init(bytes: [byte], paddingBits: byte.trailingZeroBitCount)
         }
     }
 }

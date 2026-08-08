@@ -75,4 +75,11 @@ extension Instant {
             nanosecondFraction: Int32(nanoseconds)
         )
     }
+
+    /// The subtracting counterpart to `+ (Instant, Double)` above — same file-level note
+    /// applies. Added for TX-N1E: the RFC5280Policy suite also spells validity offsets
+    /// backwards from `TestPKI.startDate` (e.g. "earlier than the intermediate").
+    static func - (lhs: Instant, rhs: Double) -> Instant {
+        lhs + (-rhs)
+    }
 }

@@ -89,13 +89,19 @@ let package = Package(
             // TestPKI) or excluded crypto backends (RSA/_CryptoExtras, SecKey); they are DEFERRED to
             // increment 2 (TestPKI-fixture shim + corpus expansion) and recorded in the
             // deferred-tests ledger. Git history preserves the fully-converted suite.
+            //
+            // TX-N1E (component 6, increment 2): CertificateStore Tests.swift, RFC5280Policy
+            // Tests.swift and Verifier Tests.swift are restored — TestPKI.swift now provides the
+            // fixture generator they were written against, built on the existing DER-level
+            // issuance shim (Issuance.swift) and the CertificateExtensionConvertible
+            // conformances added to ExtensionsBuilder.swift. Still excluded and out of TX-N1E's
+            // scope: Certificate Tests.swift, Certificate.DER Tests.swift and Certificate.Signature
+            // Tests.swift, which depend on the excluded RSA/_CryptoExtras/SecKey crypto backends
+            // rather than on TestPKI.
             exclude: [
                 "Certificate Tests.swift",
                 "Certificate.DER Tests.swift",
                 "Certificate.Signature Tests.swift",
-                "CertificateStore Tests.swift",
-                "RFC5280Policy Tests.swift",
-                "Verifier Tests.swift",
             ],
             resources: [.copy("Fixtures")]
         ),
