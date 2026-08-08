@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,9 +10,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 @preconcurrency import Crypto
+
 @testable import Certificates
 
 /// The Crypto-typed ``Certificate/PublicKey`` initialisers, parked in the TEST target.
@@ -36,27 +37,27 @@
 /// cannot represent an RSA subject public key at all: `init(spki:)` has no `.rsaKey` branch
 /// and falls through to `unsupportedPublicKey`.
 extension Certificate.PublicKey {
-    /// Construct a public key wrapping a P-256 public key.
-    /// - Parameter p256: The P-256 public key to wrap.
-    public init(_ p256: P256.Signing.PublicKey) {
-        self.init(backing: .p256(x963: Array(p256.x963Representation)))
-    }
+  /// Construct a public key wrapping a P-256 public key.
+  /// - Parameter p256: The P-256 public key to wrap.
+  public init(_ p256: P256.Signing.PublicKey) {
+    self.init(backing: .p256(x963: Array(p256.x963Representation)))
+  }
 
-    /// Construct a public key wrapping a P-384 public key.
-    /// - Parameter p384: The P-384 public key to wrap.
-    public init(_ p384: P384.Signing.PublicKey) {
-        self.init(backing: .p384(x963: Array(p384.x963Representation)))
-    }
+  /// Construct a public key wrapping a P-384 public key.
+  /// - Parameter p384: The P-384 public key to wrap.
+  public init(_ p384: P384.Signing.PublicKey) {
+    self.init(backing: .p384(x963: Array(p384.x963Representation)))
+  }
 
-    /// Construct a public key wrapping a P-521 public key.
-    /// - Parameter p521: The P-521 public key to wrap.
-    public init(_ p521: P521.Signing.PublicKey) {
-        self.init(backing: .p521(x963: Array(p521.x963Representation)))
-    }
+  /// Construct a public key wrapping a P-521 public key.
+  /// - Parameter p521: The P-521 public key to wrap.
+  public init(_ p521: P521.Signing.PublicKey) {
+    self.init(backing: .p521(x963: Array(p521.x963Representation)))
+  }
 
-    /// Construct a public key wrapping an Ed25519 public key.
-    /// - Parameter ed25519: The Ed25519 public key to wrap.
-    public init(_ ed25519: Curve25519.Signing.PublicKey) {
-        self.init(backing: .ed25519(raw: Array(ed25519.rawRepresentation)))
-    }
+  /// Construct a public key wrapping an Ed25519 public key.
+  /// - Parameter ed25519: The Ed25519 public key to wrap.
+  public init(_ ed25519: Curve25519.Signing.PublicKey) {
+    self.init(backing: .ed25519(raw: Array(ed25519.rawRepresentation)))
+  }
 }

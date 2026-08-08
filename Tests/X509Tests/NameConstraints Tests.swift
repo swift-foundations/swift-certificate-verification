@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,172 +10,185 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
-import Testing
 import ISO_8824
 import ISO_8825
+import Testing
+
 @testable import Certificates
 
 extension NameConstraints {
-    @Suite struct Test {
-        @Suite struct Unit {
-            // Built via the array-form initializer rather than the
-            // DistinguishedNameBuilder DSL (an excluded issuance-side surface in
-            // slice 1). Attribute encodings match the DSL's: countryName as
-            // PrintableString, the rest as UTF8String — so the names, and
-            // therefore the equality semantics under test, are unchanged.
-            static let names: [DistinguishedName] = [
-                try! DistinguishedName([
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.countryName,
-                        printableString: "US"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.stateOrProvinceName,
-                        utf8String: "CA"
-                    ),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
-                ]),
-                try! DistinguishedName([
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.countryName,
-                        printableString: "US"
-                    ),
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.stateOrProvinceName,
-                        utf8String: "CA"
-                    ),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.commonName, utf8String: "Test"),
-                ]),
-                try! DistinguishedName([
-                    RelativeDistinguishedName.Attribute(
-                        type: .RDNAttributeType.countryName,
-                        printableString: "GB"
-                    ),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.organizationName, utf8String: "Apple"),
-                    RelativeDistinguishedName.Attribute(type: .RDNAttributeType.commonName, utf8String: "Test"),
-                ]),
-            ]
+  @Suite struct Test {
+    @Suite struct Unit {
+      // Built via the array-form initializer rather than the
+      // DistinguishedNameBuilder DSL (an excluded issuance-side surface in
+      // slice 1). Attribute encodings match the DSL's: countryName as
+      // PrintableString, the rest as UTF8String — so the names, and
+      // therefore the equality semantics under test, are unchanged.
+      static let names: [DistinguishedName] = [
+        try! DistinguishedName([
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.countryName,
+            printableString: "US"
+          ),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.stateOrProvinceName,
+            utf8String: "CA"
+          ),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+        ]),
+        try! DistinguishedName([
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.countryName,
+            printableString: "US"
+          ),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.stateOrProvinceName,
+            utf8String: "CA"
+          ),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.commonName, utf8String: "Test"),
+        ]),
+        try! DistinguishedName([
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.countryName,
+            printableString: "GB"
+          ),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.organizationName, utf8String: "Apple"),
+          RelativeDistinguishedName.Attribute(
+            type: .RDNAttributeType.commonName, utf8String: "Test"),
+        ]),
+      ]
 
-            @Test func `directory name matches`() throws {
-                // The key here is that a distinguished name only matches a constraint if they're equal.
-                for firstName in Self.names {
-                    for secondName in Self.names {
-                        #expect(
-                            NameConstraintsPolicy.directoryNameMatchesConstraint(
-                                directoryName: firstName,
-                                constraint: secondName
-                            ) == (firstName == secondName)
-                        )
-                    }
-                }
+      @Test func `directory name matches`() throws {
+        // The key here is that a distinguished name only matches a constraint if they're equal.
+        for firstName in Self.names {
+          for secondName in Self.names {
+            #expect(
+              NameConstraintsPolicy.directoryNameMatchesConstraint(
+                directoryName: firstName,
+                constraint: secondName
+              ) == (firstName == secondName)
+            )
+          }
+        }
+      }
+
+      @Test func `lazy properties`() {
+        struct NameConstraintsPropertyValue {
+          var property: PartialKeyPath<NameConstraints>
+          var setValue: (inout NameConstraints) -> Void
+          var assertValueIsSet: (NameConstraints) -> Void
+          init<Property: Hashable>(
+            _ keyPath: WritableKeyPath<NameConstraints, Property>,
+            value: Property,
+            sourceLocation: SourceLocation = #_sourceLocation
+          ) {
+            self.property = keyPath
+            self.setValue = { constraints in
+              constraints[keyPath: keyPath] = value
             }
 
-            @Test func `lazy properties`() {
-                struct NameConstraintsPropertyValue {
-                    var property: PartialKeyPath<NameConstraints>
-                    var setValue: (inout NameConstraints) -> Void
-                    var assertValueIsSet: (NameConstraints) -> Void
-                    init<Property: Hashable>(
-                        _ keyPath: WritableKeyPath<NameConstraints, Property>,
-                        value: Property,
-                        sourceLocation: SourceLocation = #_sourceLocation
-                    ) {
-                        self.property = keyPath
-                        self.setValue = { constraints in
-                            constraints[keyPath: keyPath] = value
-                        }
+            self.assertValueIsSet = { constraints in
+              // check Equatable conformance
+              #expect(constraints[keyPath: keyPath] == value, sourceLocation: sourceLocation)
 
-                        self.assertValueIsSet = { constraints in
-                            // check Equatable conformance
-                            #expect(constraints[keyPath: keyPath] == value, sourceLocation: sourceLocation)
-
-                            // check Hashable conformance
-                            var lhsHasher = Hasher()
-                            lhsHasher.combine(constraints[keyPath: keyPath])
-                            var rhsHasher = Hasher()
-                            rhsHasher.combine(value)
-                            #expect(
-                                lhsHasher.finalize() == rhsHasher.finalize(),
-                                "hashes do not match for \(constraints[keyPath: keyPath]) and \(value)",
-                                sourceLocation: sourceLocation
-                            )
-                        }
-                    }
-                }
-
-                let tests: [NameConstraintsPropertyValue] = [
-                    NameConstraintsPropertyValue(\.excludedDNSDomains, value: []),
-                    NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["apple.com"]),
-                    NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["example.com"]),
-                    NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["apple.com", "example.com"]),
-                    NameConstraintsPropertyValue(\.permittedDNSDomains, value: []),
-                    NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["apple.com"]),
-                    NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["example.com"]),
-                    NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["apple.com", "example.com"]),
-
-                    NameConstraintsPropertyValue(\.excludedEmailAddresses, value: []),
-                    NameConstraintsPropertyValue(\.excludedEmailAddresses, value: ["foo@example.com"]),
-                    NameConstraintsPropertyValue(\.excludedEmailAddresses, value: ["bar@example.com"]),
-                    NameConstraintsPropertyValue(\.excludedEmailAddresses, value: ["foo@example.com", "bar@example.com"]),
-                    NameConstraintsPropertyValue(\.permittedEmailAddresses, value: []),
-                    NameConstraintsPropertyValue(\.permittedEmailAddresses, value: ["foo@example.com"]),
-                    NameConstraintsPropertyValue(\.permittedEmailAddresses, value: ["bar@example.com"]),
-                    NameConstraintsPropertyValue(\.permittedEmailAddresses, value: ["foo@example.com", "bar@example.com"]),
-
-                    NameConstraintsPropertyValue(\.excludedIPRanges, value: []),
-                    NameConstraintsPropertyValue(\.excludedIPRanges, value: [.v4("127.0.0.1")]),
-                    NameConstraintsPropertyValue(\.excludedIPRanges, value: [.v4("192.168.0.1")]),
-                    NameConstraintsPropertyValue(\.excludedIPRanges, value: [.v4("127.0.0.1"), .v4("192.168.0.1")]),
-                    NameConstraintsPropertyValue(\.permittedIPRanges, value: []),
-                    NameConstraintsPropertyValue(\.permittedIPRanges, value: [.v4("127.0.0.1")]),
-                    NameConstraintsPropertyValue(\.permittedIPRanges, value: [.v4("192.168.0.1")]),
-                    NameConstraintsPropertyValue(\.permittedIPRanges, value: [.v4("127.0.0.1"), .v4("192.168.0.1")]),
-
-                    NameConstraintsPropertyValue(\.forbiddenURIDomains, value: []),
-                    NameConstraintsPropertyValue(\.forbiddenURIDomains, value: [".example.com"]),
-                    NameConstraintsPropertyValue(\.forbiddenURIDomains, value: [".apple.com"]),
-                    NameConstraintsPropertyValue(\.forbiddenURIDomains, value: [".example.com", ".apple.com"]),
-                    NameConstraintsPropertyValue(\.permittedURIDomains, value: []),
-                    NameConstraintsPropertyValue(\.permittedURIDomains, value: [".example.com"]),
-                    NameConstraintsPropertyValue(\.permittedURIDomains, value: [".apple.com"]),
-                    NameConstraintsPropertyValue(\.permittedURIDomains, value: [".example.com", ".apple.com"]),
-                ]
-
-                // This will set the properties to the above values in order (and in reversed order).
-                // After it sets each property it asserts that the previous latest value of other properties are still set
-                // to their previous latest values and are not modified.
-
-                var nameConstraints = NameConstraints()
-                var latestValueForProperty: [PartialKeyPath<NameConstraints>: NameConstraintsPropertyValue] = [:]
-
-                for test in tests + tests.reversed() {
-                    test.setValue(&nameConstraints)
-                    latestValueForProperty[test.property] = test
-
-                    let newNameConstraints = NameConstraints(
-                        permittedDNSDomains: nameConstraints.permittedDNSDomains,
-                        excludedDNSDomains: nameConstraints.excludedDNSDomains,
-                        permittedIPRanges: nameConstraints.permittedIPRanges,
-                        excludedIPRanges: nameConstraints.excludedIPRanges,
-                        permittedEmailAddresses: nameConstraints.permittedEmailAddresses,
-                        excludedEmailAddresses: nameConstraints.excludedEmailAddresses,
-                        permittedURIDomains: nameConstraints.permittedURIDomains,
-                        forbiddenURIDomains: nameConstraints.forbiddenURIDomains
-                    )
-
-                    for latestValue in latestValueForProperty.values {
-                        latestValue.assertValueIsSet(nameConstraints)
-                        latestValue.assertValueIsSet(newNameConstraints)
-                    }
-                }
+              // check Hashable conformance
+              var lhsHasher = Hasher()
+              lhsHasher.combine(constraints[keyPath: keyPath])
+              var rhsHasher = Hasher()
+              rhsHasher.combine(value)
+              #expect(
+                lhsHasher.finalize() == rhsHasher.finalize(),
+                "hashes do not match for \(constraints[keyPath: keyPath]) and \(value)",
+                sourceLocation: sourceLocation
+              )
             }
+          }
         }
 
-        @Suite struct `Edge Case` {}
+        let tests: [NameConstraintsPropertyValue] = [
+          NameConstraintsPropertyValue(\.excludedDNSDomains, value: []),
+          NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["apple.com"]),
+          NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["example.com"]),
+          NameConstraintsPropertyValue(\.excludedDNSDomains, value: ["apple.com", "example.com"]),
+          NameConstraintsPropertyValue(\.permittedDNSDomains, value: []),
+          NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["apple.com"]),
+          NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["example.com"]),
+          NameConstraintsPropertyValue(\.permittedDNSDomains, value: ["apple.com", "example.com"]),
 
-        @Suite struct Integration {}
+          NameConstraintsPropertyValue(\.excludedEmailAddresses, value: []),
+          NameConstraintsPropertyValue(\.excludedEmailAddresses, value: ["foo@example.com"]),
+          NameConstraintsPropertyValue(\.excludedEmailAddresses, value: ["bar@example.com"]),
+          NameConstraintsPropertyValue(
+            \.excludedEmailAddresses, value: ["foo@example.com", "bar@example.com"]),
+          NameConstraintsPropertyValue(\.permittedEmailAddresses, value: []),
+          NameConstraintsPropertyValue(\.permittedEmailAddresses, value: ["foo@example.com"]),
+          NameConstraintsPropertyValue(\.permittedEmailAddresses, value: ["bar@example.com"]),
+          NameConstraintsPropertyValue(
+            \.permittedEmailAddresses, value: ["foo@example.com", "bar@example.com"]),
+
+          NameConstraintsPropertyValue(\.excludedIPRanges, value: []),
+          NameConstraintsPropertyValue(\.excludedIPRanges, value: [.v4("127.0.0.1")]),
+          NameConstraintsPropertyValue(\.excludedIPRanges, value: [.v4("192.168.0.1")]),
+          NameConstraintsPropertyValue(
+            \.excludedIPRanges, value: [.v4("127.0.0.1"), .v4("192.168.0.1")]),
+          NameConstraintsPropertyValue(\.permittedIPRanges, value: []),
+          NameConstraintsPropertyValue(\.permittedIPRanges, value: [.v4("127.0.0.1")]),
+          NameConstraintsPropertyValue(\.permittedIPRanges, value: [.v4("192.168.0.1")]),
+          NameConstraintsPropertyValue(
+            \.permittedIPRanges, value: [.v4("127.0.0.1"), .v4("192.168.0.1")]),
+
+          NameConstraintsPropertyValue(\.forbiddenURIDomains, value: []),
+          NameConstraintsPropertyValue(\.forbiddenURIDomains, value: [".example.com"]),
+          NameConstraintsPropertyValue(\.forbiddenURIDomains, value: [".apple.com"]),
+          NameConstraintsPropertyValue(
+            \.forbiddenURIDomains, value: [".example.com", ".apple.com"]),
+          NameConstraintsPropertyValue(\.permittedURIDomains, value: []),
+          NameConstraintsPropertyValue(\.permittedURIDomains, value: [".example.com"]),
+          NameConstraintsPropertyValue(\.permittedURIDomains, value: [".apple.com"]),
+          NameConstraintsPropertyValue(
+            \.permittedURIDomains, value: [".example.com", ".apple.com"]),
+        ]
+
+        // This will set the properties to the above values in order (and in reversed order).
+        // After it sets each property it asserts that the previous latest value of other properties are still set
+        // to their previous latest values and are not modified.
+
+        var nameConstraints = NameConstraints()
+        var latestValueForProperty:
+          [PartialKeyPath<NameConstraints>: NameConstraintsPropertyValue] = [:]
+
+        for test in tests + tests.reversed() {
+          test.setValue(&nameConstraints)
+          latestValueForProperty[test.property] = test
+
+          let newNameConstraints = NameConstraints(
+            permittedDNSDomains: nameConstraints.permittedDNSDomains,
+            excludedDNSDomains: nameConstraints.excludedDNSDomains,
+            permittedIPRanges: nameConstraints.permittedIPRanges,
+            excludedIPRanges: nameConstraints.excludedIPRanges,
+            permittedEmailAddresses: nameConstraints.permittedEmailAddresses,
+            excludedEmailAddresses: nameConstraints.excludedEmailAddresses,
+            permittedURIDomains: nameConstraints.permittedURIDomains,
+            forbiddenURIDomains: nameConstraints.forbiddenURIDomains
+          )
+
+          for latestValue in latestValueForProperty.values {
+            latestValue.assertValueIsSet(nameConstraints)
+            latestValue.assertValueIsSet(newNameConstraints)
+          }
+        }
+      }
     }
+
+    @Suite struct `Edge Case` {}
+
+    @Suite struct Integration {}
+  }
 }

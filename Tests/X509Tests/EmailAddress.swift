@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 // ⛔ TEST TARGET ONLY. VERBATIM lift of
 //   Sources/X509/DistinguishedNameBuilder/EmailAddress.swift @ fork-point 24ccdee
@@ -19,27 +19,28 @@
 // See DNBuilder.swift for the full binding condition.
 
 import ISO_8824
+
 @testable import Certificates
 
 /// Set the Domain Component (E) of a ``DistinguishedName``.
 ///
 /// This type is used in ``DistinguishedNameBuilder`` contexts.
 public struct EmailAddress: RelativeDistinguishedNameConvertible, Sendable {
-    /// The value of the email name field.
-    public var name: String
+  /// The value of the email name field.
+  public var name: String
 
-    /// Construct a new organizational unit name
-    ///
-    /// - Parameter name: The value of the organizational unit name
-    @inlinable
-    public init(_ name: String) {
-        self.name = name
-    }
+  /// Construct a new organizational unit name
+  ///
+  /// - Parameter name: The value of the organizational unit name
+  @inlinable
+  public init(_ name: String) {
+    self.name = name
+  }
 
-    @inlinable
-    public func makeRDN() throws -> RelativeDistinguishedName {
-        return RelativeDistinguishedName(
-            try .init(type: .RDNAttributeType.emailAddress, ia5String: name)
-        )
-    }
+  @inlinable
+  public func makeRDN() throws -> RelativeDistinguishedName {
+    return RelativeDistinguishedName(
+      try .init(type: .RDNAttributeType.emailAddress, ia5String: name)
+    )
+  }
 }

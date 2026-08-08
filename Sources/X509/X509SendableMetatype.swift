@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,10 +10,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 #if compiler(>=6.2)
-public typealias _X509SendableMetatype = SendableMetatype
+  public typealias _X509SendableMetatype = SendableMetatype
 #else
-public typealias _X509SendableMetatype = Any
+  public typealias _X509SendableMetatype = Any
 #endif

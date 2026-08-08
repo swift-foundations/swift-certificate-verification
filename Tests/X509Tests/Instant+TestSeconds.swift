@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 import Time_Primitive
 
@@ -35,44 +35,44 @@ import Time_Primitive
 // somewhere else, the thing you actually want is `Duration` — `.seconds(2.5)` says what
 // `2.5` means, and it is available everywhere.
 extension Instant {
-    /// Offsets an instant by a number of **seconds**, for suites carrying `Date`-era
-    /// arithmetic. See the file-level note before using or moving this.
-    ///
-    /// Whole and fractional parts are separated before scaling rather than after, so the
-    /// value scaled to nanoseconds is always below 1 and therefore exact.
-    ///
-    /// This is defensive rather than load-bearing, and the distinction is worth stating
-    /// because it is easy to overclaim. Scaling first — `rhs * 1_000_000_000` — does lose
-    /// precision once the product passes `Double`'s exact-integer range (2⁵³), but the
-    /// error lands in the nanosecond field and is a few nanoseconds wide; it does not
-    /// change the second count for any offset these suites use, and certificate validity is
-    /// encoded at second granularity anyway. Splitting costs nothing and keeps the
-    /// nanosecond field exact for arbitrary inputs, so it is the better default — but no
-    /// test here distinguishes the two forms, and none of them would fail if this were
-    /// written the other way.
-    static func + (lhs: Instant, rhs: Double) -> Instant {
-        let wholeSeconds = rhs.rounded(.towardZero)
-        let fraction = rhs - wholeSeconds  // |fraction| < 1, so scaling it is exact enough
+  /// Offsets an instant by a number of **seconds**, for suites carrying `Date`-era
+  /// arithmetic. See the file-level note before using or moving this.
+  ///
+  /// Whole and fractional parts are separated before scaling rather than after, so the
+  /// value scaled to nanoseconds is always below 1 and therefore exact.
+  ///
+  /// This is defensive rather than load-bearing, and the distinction is worth stating
+  /// because it is easy to overclaim. Scaling first — `rhs * 1_000_000_000` — does lose
+  /// precision once the product passes `Double`'s exact-integer range (2⁵³), but the
+  /// error lands in the nanosecond field and is a few nanoseconds wide; it does not
+  /// change the second count for any offset these suites use, and certificate validity is
+  /// encoded at second granularity anyway. Splitting costs nothing and keeps the
+  /// nanosecond field exact for arbitrary inputs, so it is the better default — but no
+  /// test here distinguishes the two forms, and none of them would fail if this were
+  /// written the other way.
+  static func + (lhs: Instant, rhs: Double) -> Instant {
+    let wholeSeconds = rhs.rounded(.towardZero)
+    let fraction = rhs - wholeSeconds  // |fraction| < 1, so scaling it is exact enough
 
-        let carriedNanoseconds =
-            Int64(lhs.nanosecondFraction) + Int64((fraction * 1_000_000_000).rounded())
+    let carriedNanoseconds =
+      Int64(lhs.nanosecondFraction) + Int64((fraction * 1_000_000_000).rounded())
 
-        var seconds =
-            lhs.secondsSinceUnixEpoch + Int64(wholeSeconds)
-            + carriedNanoseconds / 1_000_000_000
-        var nanoseconds = carriedNanoseconds % 1_000_000_000
+    var seconds =
+      lhs.secondsSinceUnixEpoch + Int64(wholeSeconds)
+      + carriedNanoseconds / 1_000_000_000
+    var nanoseconds = carriedNanoseconds % 1_000_000_000
 
-        // A negative offset can leave the nanosecond part below zero; `Instant` requires it
-        // in 0..<1_000_000_000, so borrow a second rather than construct an invalid value.
-        if nanoseconds < 0 {
-            nanoseconds += 1_000_000_000
-            seconds -= 1
-        }
-
-        return Instant(
-            _unchecked: (),
-            secondsSinceUnixEpoch: seconds,
-            nanosecondFraction: Int32(nanoseconds)
-        )
+    // A negative offset can leave the nanosecond part below zero; `Instant` requires it
+    // in 0..<1_000_000_000, so borrow a second rather than construct an invalid value.
+    if nanoseconds < 0 {
+      nanoseconds += 1_000_000_000
+      seconds -= 1
     }
+
+    return Instant(
+      _unchecked: (),
+      secondsSinceUnixEpoch: seconds,
+      nanosecondFraction: Int32(nanoseconds)
+    )
+  }
 }

@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftCertificates open source project
 //
@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 import ISO_8824
 import ISO_8825
 
@@ -28,33 +28,34 @@ import ISO_8825
 /// ```
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 public struct AnyPolicy: VerifierPolicy {
-    @usableFromInline
-    var policy: any VerifierPolicy
+  @usableFromInline
+  var policy: any VerifierPolicy
 
-    @inlinable
-    /// Erases the type of some ``VerifierPolicy`` to ``AnyPolicy``.
-    /// - Parameter policy: the concrete ``VerifierPolicy``
-    public init(_ policy: some VerifierPolicy) {
-        self.policy = policy
-    }
+  @inlinable
+  /// Erases the type of some ``VerifierPolicy`` to ``AnyPolicy``.
+  /// - Parameter policy: the concrete ``VerifierPolicy``
+  public init(_ policy: some VerifierPolicy) {
+    self.policy = policy
+  }
 
-    /// Erases the type of some ``VerifierPolicy`` to ``AnyPolicy``.
-    /// - Parameter makePolicy: the ``VerifierPolicy`` constructed using the ``PolicyBuilder`` DSL.
-    @inlinable
-    public init(@PolicyBuilder makePolicy: () throws -> some VerifierPolicy) rethrows {
-        self.init(try makePolicy())
-    }
+  /// Erases the type of some ``VerifierPolicy`` to ``AnyPolicy``.
+  /// - Parameter makePolicy: the ``VerifierPolicy`` constructed using the ``PolicyBuilder`` DSL.
+  @inlinable
+  public init(@PolicyBuilder makePolicy: () throws -> some VerifierPolicy) rethrows {
+    self.init(try makePolicy())
+  }
 
-    @inlinable
-    public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
-        policy.verifyingCriticalExtensions
-    }
+  @inlinable
+  public var verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier] {
+    policy.verifyingCriticalExtensions
+  }
 
-    @inlinable
-    public mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult
-    {
-        await policy.chainMeetsPolicyRequirements(chain: chain)
-    }
+  @inlinable
+  public mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async
+    -> PolicyEvaluationResult
+  {
+    await policy.chainMeetsPolicyRequirements(chain: chain)
+  }
 }
 
 @available(*, unavailable)
@@ -62,37 +63,41 @@ extension AnyPolicy: Sendable {}
 
 @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
 struct LegacyPolicySet: VerifierPolicy {
-    let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier]
+  let verifyingCriticalExtensions: [ISO_8824.ObjectIdentifier]
 
-    var policies: [any VerifierPolicy]
+  var policies: [any VerifierPolicy]
 
-    init(policies: [any VerifierPolicy]) {
-        self.policies = policies
+  init(policies: [any VerifierPolicy]) {
+    self.policies = policies
 
-        var extensions: [ISO_8824.ObjectIdentifier] = []
-        extensions.reserveCapacity(policies.reduce(into: 0, { $0 += $1.verifyingCriticalExtensions.count }))
+    var extensions: [ISO_8824.ObjectIdentifier] = []
+    extensions.reserveCapacity(
+      policies.reduce(into: 0, { $0 += $1.verifyingCriticalExtensions.count }))
 
-        for policy in policies {
-            extensions.append(contentsOf: policy.verifyingCriticalExtensions)
-        }
-
-        self.verifyingCriticalExtensions = extensions
+    for policy in policies {
+      extensions.append(contentsOf: policy.verifyingCriticalExtensions)
     }
 
-    mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
-        var policyIndex = self.policies.startIndex
+    self.verifyingCriticalExtensions = extensions
+  }
 
-        while policyIndex < self.policies.endIndex {
-            switch await self.policies[policyIndex].chainMeetsPolicyRequirements(chain: chain) {
-            case .meetsPolicy:
-                ()
-            case .failsToMeetPolicy(reason: let reason):
-                return .failsToMeetPolicy(reason: reason)
-            }
+  mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async
+    -> PolicyEvaluationResult
+  {
+    var policyIndex = self.policies.startIndex
 
-            self.policies.formIndex(after: &policyIndex)
-        }
+    while policyIndex < self.policies.endIndex {
+      switch await self.policies[policyIndex].chainMeetsPolicyRequirements(chain: chain) {
+      case .meetsPolicy:
+        ()
 
-        return .meetsPolicy
+      case .failsToMeetPolicy(let reason):
+        return .failsToMeetPolicy(reason: reason)
+      }
+
+      self.policies.formIndex(after: &policyIndex)
     }
+
+    return .meetsPolicy
+  }
 }
