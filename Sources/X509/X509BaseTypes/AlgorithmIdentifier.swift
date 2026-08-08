@@ -39,7 +39,7 @@ package struct AlgorithmIdentifier: ISO_8825.DER.ImplicitlyTaggable, ISO_8825.BE
     var parameters: ISO_8825.`Any`?
 
     @inlinable
-    init(algorithm: ISO_8824.ObjectIdentifier, parameters: ISO_8825.`Any`?) {
+    package init(algorithm: ISO_8824.ObjectIdentifier, parameters: ISO_8825.`Any`?) {
         self.algorithm = algorithm
         self.parameters = parameters
     }

@@ -264,7 +264,7 @@ extension Certificate {
             var alternativeNames: SubjectAlternativeNames.SubSequence
 
             @inlinable
-            init(_ subject: DistinguishedName, _ alternativeNames: SubjectAlternativeNames) {
+            package init(_ subject: DistinguishedName, _ alternativeNames: SubjectAlternativeNames) {
                 self.subject = subject
                 self.alternativeNames = alternativeNames[...]
             }
